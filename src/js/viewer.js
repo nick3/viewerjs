@@ -119,7 +119,7 @@ class Viewer {
 
     template.innerHTML = TEMPLATE;
 
-    self.parent = parent = element.parentNode;
+    self.parent = parent = options.parent || element.parentNode;
     self.viewer = viewer = $.getByClass(template, 'viewer-container')[0];
     self.canvas = $.getByClass(viewer, 'viewer-canvas')[0];
     self.footer = $.getByClass(viewer, 'viewer-footer')[0];
@@ -170,7 +170,7 @@ class Viewer {
     }
 
     // Inserts the viewer after to the current element
-    parent.insertBefore(viewer, element.nextSibling);
+    parent.insertBefore(viewer, options.parent ? null : element.nextSibling);
 
     if (options.inline) {
       self.render();
