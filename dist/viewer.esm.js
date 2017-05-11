@@ -5,7 +5,7 @@
  * Copyright (c) 2017 Fengyuan Chen
  * Released under the MIT license
  *
- * Date: 2017-05-11T02:38:49.502Z
+ * Date: 2017-05-11T03:04:12.305Z
  */
 
 var DEFAULTS = {
@@ -2328,7 +2328,12 @@ var Viewer = function () {
       setData(element, 'viewer', self);
 
       var isImg = element.tagName.toLowerCase() === 'img';
-      var images = isImg ? [element] : getByTag(element, 'img');
+      var images = [];
+      if (isImg) {
+        images = [element];
+      } else {
+        images = options.selector ? document.querySelectorAll(options.selector) : getByTag(element, 'img');
+      }
       var length = images.length;
 
       if (!length) {
