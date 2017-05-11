@@ -53,8 +53,9 @@ class Viewer {
       images = [element];
     } else {
       images = options.selector ?
-        document.querySelectorAll(options.selector) : $.getByTag(element, 'img');
+        element.querySelectorAll(options.selector) : $.getByTag(element, 'img');
     }
+    console.log('images', images);
     const length = images.length;
 
     if (!length) {
