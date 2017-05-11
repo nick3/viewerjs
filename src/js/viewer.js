@@ -48,7 +48,10 @@ class Viewer {
     $.setData(element, 'viewer', self);
 
     const isImg = element.tagName.toLowerCase() === 'img';
-    const images = isImg ? [element] : $.getByTag(element, 'img');
+    const images = isImg ? [element] :
+      (options.selector ?
+        document.querySelectorAll(options.selector) : $.getByTag(element, 'img')
+      );
     const length = images.length;
 
     if (!length) {
