@@ -102,6 +102,10 @@ export default {
       self.timeout = false;
     }
 
+    if (!image) {
+      return;
+    }
+
     $.removeClass(image, 'viewer-invisible');
 
     image.style.cssText = (
@@ -157,7 +161,7 @@ export default {
         width,
         height,
         marginLeft: (parentWidth - width) / 2,
-        marginTop: (parentHeight - height) / 2
+        marginTop: (parentHeight - height) / 2,
       });
     });
   },
@@ -177,8 +181,19 @@ export default {
     }
 
     if (self.played) {
+      if (self.options.fullscreen && self.fulled &&
+        !document.fullscreenElement &&
+        !document.mozFullScreenElement &&
+        !document.webkitFullscreenElement &&
+        !document.msFullscreenElement) {
+        self.stop();
+        return;
+      }
+
       $.each($.getByTag(self.player, 'img'), (image) => {
-        $.addListener(image, 'load', $.proxy(self.loadImage, self), true);
+        $.addListener(image, 'load', $.proxy(self.loadImage, self), {
+          once: true,
+        });
         $.dispatchEvent(image, 'load');
       });
     }
@@ -230,7 +245,6 @@ export default {
     }
 
     switch (key) {
-
       // (Key: Esc)
       case 27:
         if (self.played) {
@@ -295,7 +309,7 @@ export default {
 
         break;
 
-      // No default
+      default:
     }
   },
 
@@ -311,7 +325,7 @@ export default {
     const pointers = self.pointers;
     const e = $.getEvent(event);
 
-    if (!self.viewed) {
+    if (!self.viewed || self.transitioning) {
       return;
     }
 

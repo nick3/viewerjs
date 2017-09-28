@@ -1,11 +1,11 @@
 /*!
- * Viewer.js v0.7.0
+ * Viewer.js v0.7.2
  * https://github.com/fengyuanchen/viewerjs
  *
  * Copyright (c) 2017 Fengyuan Chen
  * Released under the MIT license
  *
- * Date: 2017-04-30T03:31:43.527Z
+ * Date: 2017-09-28T03:09:14.766Z
  */
 
 'use strict';
@@ -88,116 +88,9 @@ var DEFAULTS = {
   viewed: null
 };
 
-var TEMPLATE = '<div class="viewer-container">' + '<div class="viewer-canvas"></div>' + '<div class="viewer-footer">' + '<div class="viewer-title"></div>' + '<ul class="viewer-toolbar">' + '<li class="viewer-zoom-in" data-action="zoom-in"></li>' + '<li class="viewer-zoom-out" data-action="zoom-out"></li>' + '<li class="viewer-one-to-one" data-action="one-to-one"></li>' + '<li class="viewer-reset" data-action="reset"></li>' + '<li class="viewer-prev" data-action="prev"></li>' + '<li class="viewer-play" data-action="play"></li>' + '<li class="viewer-next" data-action="next"></li>' + '<li class="viewer-rotate-left" data-action="rotate-left"></li>' + '<li class="viewer-rotate-right" data-action="rotate-right"></li>' + '<li class="viewer-flip-horizontal" data-action="flip-horizontal"></li>' + '<li class="viewer-flip-vertical" data-action="flip-vertical"></li>' + '</ul>' + '<div class="viewer-navbar">' + '<ul class="viewer-list"></ul>' + '</div>' + '</div>' + '<div class="viewer-tooltip"></div>' + '<div class="viewer-button" data-action="mix"></div>' + '<div class="viewer-player"></div>' + '</div>';
+var TEMPLATE = '<div class="viewer-container">' + '<div class="viewer-canvas"></div>' + '<div class="viewer-footer">' + '<div class="viewer-title"></div>' + '<ul class="viewer-toolbar">' + '<li role="button" class="viewer-zoom-in" data-action="zoom-in"></li>' + '<li role="button" class="viewer-zoom-out" data-action="zoom-out"></li>' + '<li role="button" class="viewer-one-to-one" data-action="one-to-one"></li>' + '<li role="button" class="viewer-reset" data-action="reset"></li>' + '<li role="button" class="viewer-prev" data-action="prev"></li>' + '<li role="button" class="viewer-play" data-action="play"></li>' + '<li role="button" class="viewer-next" data-action="next"></li>' + '<li role="button" class="viewer-rotate-left" data-action="rotate-left"></li>' + '<li role="button" class="viewer-rotate-right" data-action="rotate-right"></li>' + '<li role="button" class="viewer-flip-horizontal" data-action="flip-horizontal"></li>' + '<li role="button" class="viewer-flip-vertical" data-action="flip-vertical"></li>' + '</ul>' + '<div class="viewer-navbar">' + '<ul class="viewer-list"></ul>' + '</div>' + '</div>' + '<div class="viewer-tooltip"></div>' + '<div role="button" class="viewer-button" data-action="mix"></div>' + '<div class="viewer-player"></div>' + '</div>';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-
-
-
-
-
-
-
-
-
-
-var classCallCheck = function (instance, Constructor) {
-  if (!(instance instanceof Constructor)) {
-    throw new TypeError("Cannot call a class as a function");
-  }
-};
-
-var createClass = function () {
-  function defineProperties(target, props) {
-    for (var i = 0; i < props.length; i++) {
-      var descriptor = props[i];
-      descriptor.enumerable = descriptor.enumerable || false;
-      descriptor.configurable = true;
-      if ("value" in descriptor) descriptor.writable = true;
-      Object.defineProperty(target, descriptor.key, descriptor);
-    }
-  }
-
-  return function (Constructor, protoProps, staticProps) {
-    if (protoProps) defineProperties(Constructor.prototype, protoProps);
-    if (staticProps) defineProperties(Constructor, staticProps);
-    return Constructor;
-  };
-}();
-
-
-
-
-
-
-
-var get = function get(object, property, receiver) {
-  if (object === null) object = Function.prototype;
-  var desc = Object.getOwnPropertyDescriptor(object, property);
-
-  if (desc === undefined) {
-    var parent = Object.getPrototypeOf(object);
-
-    if (parent === null) {
-      return undefined;
-    } else {
-      return get(parent, property, receiver);
-    }
-  } else if ("value" in desc) {
-    return desc.value;
-  } else {
-    var getter = desc.get;
-
-    if (getter === undefined) {
-      return undefined;
-    }
-
-    return getter.call(receiver);
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-var set = function set(object, property, value, receiver) {
-  var desc = Object.getOwnPropertyDescriptor(object, property);
-
-  if (desc === undefined) {
-    var parent = Object.getPrototypeOf(object);
-
-    if (parent !== null) {
-      set(parent, property, value, receiver);
-    }
-  } else if ("value" in desc && desc.writable) {
-    desc.value = value;
-  } else {
-    var setter = desc.set;
-
-    if (setter !== undefined) {
-      setter.call(receiver, value);
-    }
-  }
-
-  return value;
-};
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 // RegExps
 var REGEXP_HYPHENATE = /([a-z\d])([A-Z])/g;
@@ -254,7 +147,7 @@ function isArray(arr) {
   return Array.isArray ? Array.isArray(arr) : typeOf(arr) === 'array';
 }
 
-function toArray$$1(obj, offset) {
+function toArray(obj, offset) {
   offset = offset >= 0 ? offset : 0;
 
   if (Array.from) {
@@ -295,7 +188,7 @@ function each(obj, callback) {
     if (isArray(obj) || isNumber(obj.length) /* array-like */) {
         var length = obj.length;
 
-        for (i = 0; i < length; i++) {
+        for (i = 0; i < length; i += 1) {
           if (callback.call(obj, obj[i], i, obj) === false) {
             break;
           }
@@ -473,50 +366,60 @@ function removeData(element, name) {
   }
 }
 
-function removeListener(element, type, handler) {
+function removeListener(element, type, listener) {
+  var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
   var types = trim(type).split(REGEXP_SPACES);
 
   if (types.length > 1) {
     each(types, function (t) {
-      removeListener(element, t, handler);
+      removeListener(element, t, listener);
     });
     return;
+  }
+
+  if (isFunction(listener.onceListener)) {
+    listener = listener.onceListener;
+    delete listener.onceListener;
   }
 
   if (element.removeEventListener) {
-    element.removeEventListener(type, handler, false);
+    element.removeEventListener(type, listener, options);
   } else if (element.detachEvent) {
-    element.detachEvent('on' + type, handler);
+    element.detachEvent('on' + type, listener);
   }
 }
 
-function addListener(element, type, _handler, once) {
+function addListener(element, type, listener) {
+  var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
   var types = trim(type).split(REGEXP_SPACES);
-  var originalHandler = _handler;
 
   if (types.length > 1) {
     each(types, function (t) {
-      addListener(element, t, _handler);
+      addListener(element, t, listener);
     });
     return;
   }
 
-  if (once) {
-    _handler = function handler() {
+  if (options.once) {
+    var originalListener = listener;
+    var onceListener = function onceListener() {
       for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
         args[_key4] = arguments[_key4];
       }
 
-      removeListener(element, type, _handler);
-
-      return originalHandler.apply(element, args);
+      removeListener(element, type, onceListener);
+      return originalListener.apply(element, args);
     };
+    originalListener.onceListener = onceListener;
+    listener = onceListener;
   }
 
   if (element.addEventListener) {
-    element.addEventListener(type, _handler, false);
+    element.addEventListener(type, listener, options);
   } else if (element.attachEvent) {
-    element.attachEvent('on' + type, _handler);
+    element.attachEvent('on' + type, listener);
   }
 }
 
@@ -627,11 +530,6 @@ function setText(element, text) {
   }
 }
 
-// Force reflow to enable CSS3 transition
-function forceReflow(element) {
-  return element.offsetWidth;
-}
-
 // e.g.: http://domain.com/path/to/picture.jpg?size=1280×960 -> picture.jpg
 function getImageName(url) {
   return isString(url) ? url.replace(/^.*\//, '').replace(/[?&#].*$/, '') : '';
@@ -685,6 +583,8 @@ function getResponsiveClass(option) {
 
     case 4:
       return 'viewer-hide-md-down';
+
+    default:
   }
 
   return '';
@@ -753,7 +653,7 @@ function getPointersCenter(pointers) {
   };
 }
 
-var render$1 = {
+var render = {
   render: function render() {
     var self = this;
 
@@ -777,10 +677,12 @@ var render$1 = {
     var viewerData = void 0;
 
     if (options.inline) {
-      self.parentData = viewerData = {
+      viewerData = {
         width: Math.max(parent.offsetWidth, options.minWidth),
         height: Math.max(parent.offsetHeight, options.minHeight)
       };
+
+      self.parentData = viewerData;
     }
 
     if (self.fulled || !viewerData) {
@@ -818,14 +720,16 @@ var render$1 = {
         url = url.call(image, image);
       }
 
-      items.push('<li>' + '<img' + (' src="' + src + '"') + ' data-action="view"' + (' data-index="' + i + '"') + (' data-original-url="' + (url || src) + '"') + (' alt="' + alt + '"') + '>' + '</li>');
+      items.push('<li>' + '<img' + (' src="' + src + '"') + ' role="button"' + ' data-action="view"' + (' data-index="' + i + '"') + (' data-original-url="' + (url || src) + '"') + (' alt="' + alt + '"') + '>' + '</li>');
     });
 
     list.innerHTML = items.join('');
 
     each(getByTag(list, 'img'), function (image) {
       setData(image, 'filled', true);
-      addListener(image, 'load', proxy(self.loadImage, self), true);
+      addListener(image, 'load', proxy(self.loadImage, self), {
+        once: true
+      });
     });
 
     self.items = getByTag(list, 'li');
@@ -833,7 +737,9 @@ var render$1 = {
     if (options.transition) {
       addListener(element, 'viewed', function () {
         addClass(list, 'viewer-transition');
-      }, true);
+      }, {
+        once: true
+      });
     }
   },
   renderList: function renderList(index) {
@@ -931,7 +837,9 @@ var render$1 = {
 
     if (isFunction(callback)) {
       if (self.transitioning) {
-        addListener(image, 'transitionend', callback, true);
+        addListener(image, 'transitionend', callback, {
+          once: true
+        });
       } else {
         callback();
       }
@@ -1110,6 +1018,10 @@ var handlers = {
       self.timeout = false;
     }
 
+    if (!image) {
+      return;
+    }
+
     removeClass(image, 'viewer-invisible');
 
     image.style.cssText = 'width:0;' + 'height:0;' + ('margin-left:' + viewerData.width / 2 + 'px;') + ('margin-top:' + viewerData.height / 2 + 'px;') + 'max-width:none!important;' + 'visibility:visible;';
@@ -1176,8 +1088,15 @@ var handlers = {
     }
 
     if (self.played) {
+      if (self.options.fullscreen && self.fulled && !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        self.stop();
+        return;
+      }
+
       each(getByTag(self.player, 'img'), function (image) {
-        addListener(image, 'load', proxy(self.loadImage, self), true);
+        addListener(image, 'load', proxy(self.loadImage, self), {
+          once: true
+        });
         dispatchEvent(image, 'load');
       });
     }
@@ -1227,7 +1146,6 @@ var handlers = {
     }
 
     switch (key) {
-
       // (Key: Esc)
       case 27:
         if (self.played) {
@@ -1292,7 +1210,7 @@ var handlers = {
 
         break;
 
-      // No default
+      default:
     }
   },
   dragstart: function dragstart(e) {
@@ -1306,7 +1224,7 @@ var handlers = {
     var pointers = self.pointers;
     var e = getEvent(event);
 
-    if (!self.viewed) {
+    if (!self.viewed || self.transitioning) {
       return;
     }
 
@@ -1402,7 +1320,9 @@ var methods = {
     }
 
     if (isFunction(options.show)) {
-      addListener(element, 'show', options.show, true);
+      addListener(element, 'show', options.show, {
+        once: true
+      });
     }
 
     if (dispatchEvent(element, 'show') === false) {
@@ -1415,15 +1335,22 @@ var methods = {
 
     removeClass(viewer, 'viewer-hide');
     addListener(element, 'shown', function () {
-      self.view(self.target ? inArray(self.target, toArray$$1(self.images)) : self.index);
+      self.view(self.target ? inArray(self.target, toArray(self.images)) : self.index);
       self.target = false;
-    }, true);
+    }, {
+      once: true
+    });
 
     if (options.transition) {
       self.transitioning = true;
       addClass(viewer, 'viewer-transition');
-      forceReflow(viewer);
-      addListener(viewer, 'transitionend', proxy(self.shown, self), true);
+
+      // Force reflow to enable CSS3 transition
+      // eslint-disable-next-line
+      viewer.offsetWidth;
+      addListener(viewer, 'transitionend', proxy(self.shown, self), {
+        once: true
+      });
       addClass(viewer, 'viewer-in');
     } else {
       addClass(viewer, 'viewer-in');
@@ -1446,7 +1373,9 @@ var methods = {
     }
 
     if (isFunction(options.hide)) {
-      addListener(element, 'hide', options.hide, true);
+      addListener(element, 'hide', options.hide, {
+        once: true
+      });
     }
 
     if (dispatchEvent(element, 'hide') === false) {
@@ -1456,9 +1385,13 @@ var methods = {
     if (self.viewed && options.transition) {
       self.transitioning = true;
       addListener(self.image, 'transitionend', function () {
-        addListener(viewer, 'transitionend', proxy(self.hidden, self), true);
+        addListener(viewer, 'transitionend', proxy(self.hidden, self), {
+          once: true
+        });
         removeClass(viewer, 'viewer-in');
-      }, true);
+      }, {
+        once: true
+      });
       self.zoomTo(0, false, false, true);
     } else {
       removeClass(viewer, 'viewer-in');
@@ -1505,10 +1438,7 @@ var methods = {
 
     self.image = image;
 
-    if (self.viewed) {
-      removeClass(self.items[self.index], 'viewer-active');
-    }
-
+    removeClass(self.items[self.index], 'viewer-active');
     addClass(item, 'viewer-active');
 
     self.viewed = false;
@@ -1530,12 +1460,16 @@ var methods = {
       var imageData = self.imageData;
 
       setText(title, alt + ' (' + imageData.naturalWidth + ' \xD7 ' + imageData.naturalHeight + ')');
-    }, true);
+    }, {
+      once: true
+    });
 
     if (image.complete) {
       self.load();
     } else {
-      addListener(image, 'load', proxy(self.load, self), true);
+      addListener(image, 'load', proxy(self.load, self), {
+        once: true
+      });
 
       if (self.timeout) {
         clearTimeout(self.timeout);
@@ -1677,7 +1611,7 @@ var methods = {
         ratio = Math.min(Math.max(ratio, minZoomRatio), maxZoomRatio);
       }
 
-      if (ratio > 0.95 && ratio < 1.05) {
+      if (_originalEvent && ratio > 0.95 && ratio < 1.05) {
         ratio = 1;
       }
 
@@ -1837,6 +1771,7 @@ var methods = {
     }
 
     self.played = true;
+    self.onLoadWhenPlay = load;
     addClass(player, 'viewer-show');
 
     each(self.items, function (item, i) {
@@ -1845,7 +1780,7 @@ var methods = {
 
       image.src = getData(img, 'originalUrl');
       image.alt = img.getAttribute('alt');
-      total++;
+      total += 1;
 
       addClass(image, 'viewer-fade');
       toggleClass(image, 'viewer-transition', options.transition);
@@ -1856,27 +1791,27 @@ var methods = {
       }
 
       list.push(image);
-      addListener(image, 'load', load, true);
+      addListener(image, 'load', load, {
+        once: true
+      });
       appendChild(player, image);
     });
 
     if (isNumber(options.interval) && options.interval > 0) {
-      (function () {
-        var playing = function playing() {
-          self.playing = setTimeout(function () {
-            removeClass(list[index], 'viewer-in');
-            index++;
-            index = index < total ? index : 0;
-            addClass(list[index], 'viewer-in');
+      var playing = function playing() {
+        self.playing = setTimeout(function () {
+          removeClass(list[index], 'viewer-in');
+          index += 1;
+          index = index < total ? index : 0;
+          addClass(list[index], 'viewer-in');
 
-            playing();
-          }, options.interval);
-        };
-
-        if (total > 1) {
           playing();
-        }
-      })();
+        }, options.interval);
+      };
+
+      if (total > 1) {
+        playing();
+      }
     }
 
     return self;
@@ -1898,6 +1833,11 @@ var methods = {
 
     self.played = false;
     clearTimeout(self.playing);
+    each(getByTag(self.player, 'img'), function (image) {
+      if (!image.complete) {
+        removeListener(image, 'load', self.onLoadWhenPlay);
+      }
+    });
     removeClass(player, 'viewer-show');
     empty(player);
 
@@ -2016,7 +1956,10 @@ var methods = {
         addClass(tooltipBox, 'viewer-show');
         addClass(tooltipBox, 'viewer-fade');
         addClass(tooltipBox, 'viewer-transition');
-        forceReflow(tooltipBox);
+
+        // Force reflow to enable CSS3 transition
+        // eslint-disable-next-line
+        tooltipBox.offsetWidth;
         addClass(tooltipBox, 'viewer-in');
       } else {
         addClass(tooltipBox, 'viewer-show');
@@ -2032,7 +1975,9 @@ var methods = {
           removeClass(tooltipBox, 'viewer-fade');
           removeClass(tooltipBox, 'viewer-transition');
           self.fading = false;
-        }, true);
+        }, {
+          once: true
+        });
 
         removeClass(tooltipBox, 'viewer-in');
         self.fading = true;
@@ -2180,7 +2125,9 @@ var others = {
     self.bind();
 
     if (isFunction(options.shown)) {
-      addListener(element, 'shown', options.shown, true);
+      addListener(element, 'shown', options.shown, {
+        once: true
+      });
     }
 
     dispatchEvent(element, 'shown');
@@ -2201,7 +2148,9 @@ var others = {
     self.resetImage();
 
     if (isFunction(options.hidden)) {
-      addListener(element, 'hidden', options.hidden, true);
+      addListener(element, 'hidden', options.hidden, {
+        once: true
+      });
     }
 
     dispatchEvent(element, 'hidden');
@@ -2245,7 +2194,6 @@ var others = {
     var offsetY = pointer.endY - pointer.startY;
 
     switch (self.action) {
-
       // Move the current image
       case 'move':
         self.move(offsetX, offsetY);
@@ -2269,7 +2217,7 @@ var others = {
 
         break;
 
-      // No default
+      default:
     }
 
     // Override
@@ -2287,12 +2235,16 @@ var others = {
   }
 };
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var SUPPORT_TRANSITION = typeof document.createElement('viewer').style.transition !== 'undefined';
 var AnotherViewer = void 0;
 
 var Viewer = function () {
   function Viewer(element, options) {
-    classCallCheck(this, Viewer);
+    _classCallCheck(this, Viewer);
 
     var self = this;
 
@@ -2318,7 +2270,7 @@ var Viewer = function () {
     self.init();
   }
 
-  createClass(Viewer, [{
+  _createClass(Viewer, [{
     key: 'init',
     value: function init() {
       var self = this;
@@ -2332,7 +2284,12 @@ var Viewer = function () {
       setData(element, 'viewer', self);
 
       var isImg = element.tagName.toLowerCase() === 'img';
-      var images = isImg ? [element] : getByTag(element, 'img');
+      var images = [];
+      if (isImg) {
+        images = [element];
+      } else {
+        images = options.selector ? document.querySelectorAll(options.selector) : getByTag(element, 'img');
+      }
       var length = images.length;
 
       if (!length) {
@@ -2340,7 +2297,9 @@ var Viewer = function () {
       }
 
       if (isFunction(options.ready)) {
-        addListener(element, 'ready', options.ready, true);
+        addListener(element, 'ready', options.ready, {
+          once: true
+        });
       }
 
       // Override `transition` option if it is not supported
@@ -2356,21 +2315,23 @@ var Viewer = function () {
       self.scrollbarWidth = window.innerWidth - document.body.clientWidth;
 
       if (options.inline) {
-        (function () {
-          var progress = proxy(self.progress, self);
+        var progress = proxy(self.progress, self);
 
-          addListener(element, 'ready', function () {
-            self.view();
-          }, true);
+        addListener(element, 'ready', function () {
+          self.view();
+        }, {
+          once: true
+        });
 
-          each(images, function (image) {
-            if (image.complete) {
-              progress();
-            } else {
-              addListener(image, 'load', progress, true);
-            }
-          });
-        })();
+        each(images, function (image) {
+          if (image.complete) {
+            progress();
+          } else {
+            addListener(image, 'load', progress, {
+              once: true
+            });
+          }
+        });
       } else {
         addListener(element, 'click', self.onStart = proxy(self.start, self));
       }
@@ -2380,7 +2341,7 @@ var Viewer = function () {
     value: function progress() {
       var self = this;
 
-      self.count++;
+      self.count += 1;
 
       if (self.count === self.length) {
         self.build();
@@ -2397,24 +2358,25 @@ var Viewer = function () {
         return;
       }
 
+      var parent = options.parent || element.parentNode;
       var template = document.createElement('div');
-      var parent = void 0;
-      var viewer = void 0;
-      var button = void 0;
-      var toolbar = void 0;
-      var navbar = void 0;
-      var title = void 0;
 
       template.innerHTML = TEMPLATE;
 
-      self.parent = parent = element.parentNode;
-      self.viewer = viewer = getByClass(template, 'viewer-container')[0];
+      var viewer = getByClass(template, 'viewer-container')[0];
+      var title = getByClass(viewer, 'viewer-title')[0];
+      var toolbar = getByClass(viewer, 'viewer-toolbar')[0];
+      var navbar = getByClass(viewer, 'viewer-navbar')[0];
+      var button = getByClass(viewer, 'viewer-button')[0];
+
+      self.parent = parent;
+      self.viewer = viewer;
+      self.title = title;
+      self.toolbar = toolbar;
+      self.navbar = navbar;
+      self.button = button;
       self.canvas = getByClass(viewer, 'viewer-canvas')[0];
       self.footer = getByClass(viewer, 'viewer-footer')[0];
-      self.title = title = getByClass(viewer, 'viewer-title')[0];
-      self.toolbar = toolbar = getByClass(viewer, 'viewer-toolbar')[0];
-      self.navbar = navbar = getByClass(viewer, 'viewer-navbar')[0];
-      self.button = button = getByClass(viewer, 'viewer-button')[0];
       self.tooltipBox = getByClass(viewer, 'viewer-tooltip')[0];
       self.player = getByClass(viewer, 'viewer-player')[0];
       self.list = getByClass(viewer, 'viewer-list')[0];
@@ -2446,6 +2408,8 @@ var Viewer = function () {
             position: 'relative'
           });
         }
+
+        parent.insertBefore(viewer, element.nextSibling);
       } else {
         addClass(button, 'viewer-close');
         addClass(viewer, 'viewer-fixed');
@@ -2455,10 +2419,9 @@ var Viewer = function () {
         setStyle(viewer, {
           zIndex: options.zIndex
         });
-      }
 
-      // Inserts the viewer after to the current element
-      parent.insertBefore(viewer, element.nextSibling);
+        document.body.appendChild(viewer);
+      }
 
       if (options.inline) {
         self.render();
@@ -2494,10 +2457,11 @@ var Viewer = function () {
       extend(DEFAULTS, isPlainObject(options) && options);
     }
   }]);
+
   return Viewer;
 }();
 
-extend(Viewer.prototype, render$1);
+extend(Viewer.prototype, render);
 extend(Viewer.prototype, events);
 extend(Viewer.prototype, handlers);
 extend(Viewer.prototype, methods);

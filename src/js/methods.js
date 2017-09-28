@@ -16,7 +16,9 @@ export default {
     }
 
     if ($.isFunction(options.show)) {
-      $.addListener(element, 'show', options.show, true);
+      $.addListener(element, 'show', options.show, {
+        once: true,
+      });
     }
 
     if ($.dispatchEvent(element, 'show') === false) {
@@ -31,13 +33,20 @@ export default {
     $.addListener(element, 'shown', () => {
       self.view(self.target ? $.inArray(self.target, $.toArray(self.images)) : self.index);
       self.target = false;
-    }, true);
+    }, {
+      once: true,
+    });
 
     if (options.transition) {
       self.transitioning = true;
       $.addClass(viewer, 'viewer-transition');
-      $.forceReflow(viewer);
-      $.addListener(viewer, 'transitionend', $.proxy(self.shown, self), true);
+
+      // Force reflow to enable CSS3 transition
+      // eslint-disable-next-line
+      viewer.offsetWidth;
+      $.addListener(viewer, 'transitionend', $.proxy(self.shown, self), {
+        once: true,
+      });
       $.addClass(viewer, 'viewer-in');
     } else {
       $.addClass(viewer, 'viewer-in');
@@ -59,7 +68,9 @@ export default {
     }
 
     if ($.isFunction(options.hide)) {
-      $.addListener(element, 'hide', options.hide, true);
+      $.addListener(element, 'hide', options.hide, {
+        once: true,
+      });
     }
 
     if ($.dispatchEvent(element, 'hide') === false) {
@@ -69,9 +80,13 @@ export default {
     if (self.viewed && options.transition) {
       self.transitioning = true;
       $.addListener(self.image, 'transitionend', () => {
-        $.addListener(viewer, 'transitionend', $.proxy(self.hidden, self), true);
+        $.addListener(viewer, 'transitionend', $.proxy(self.hidden, self), {
+          once: true,
+        });
         $.removeClass(viewer, 'viewer-in');
-      }, true);
+      }, {
+        once: true,
+      });
       self.zoomTo(0, false, false, true);
     } else {
       $.removeClass(viewer, 'viewer-in');
@@ -118,10 +133,7 @@ export default {
 
     self.image = image;
 
-    if (self.viewed) {
-      $.removeClass(self.items[self.index], 'viewer-active');
-    }
-
+    $.removeClass(self.items[self.index], 'viewer-active');
     $.addClass(item, 'viewer-active');
 
     self.viewed = false;
@@ -143,12 +155,16 @@ export default {
       const imageData = self.imageData;
 
       $.setText(title, `${alt} (${imageData.naturalWidth} × ${imageData.naturalHeight})`);
-    }, true);
+    }, {
+      once: true,
+    });
 
     if (image.complete) {
       self.load();
     } else {
-      $.addListener(image, 'load', $.proxy(self.load, self), true);
+      $.addListener(image, 'load', $.proxy(self.load, self), {
+        once: true,
+      });
 
       if (self.timeout) {
         clearTimeout(self.timeout);
@@ -194,7 +210,7 @@ export default {
 
     self.moveTo(
       $.isUndefined(offsetX) ? offsetX : imageData.left + Number(offsetX),
-      $.isUndefined(offsetY) ? offsetY : imageData.top + Number(offsetY)
+      $.isUndefined(offsetY) ? offsetY : imageData.top + Number(offsetY),
     );
 
     return self;
@@ -287,7 +303,7 @@ export default {
         ratio = Math.min(Math.max(ratio, minZoomRatio), maxZoomRatio);
       }
 
-      if (ratio > 0.95 && ratio < 1.05) {
+      if (_originalEvent && ratio > 0.95 && ratio < 1.05) {
         ratio = 1;
       }
 
@@ -298,7 +314,7 @@ export default {
         const offset = $.getOffset(self.viewer);
         const center = pointers && Object.keys(pointers).length ? $.getPointersCenter(pointers) : {
           pageX: _originalEvent.pageX,
-          pageY: _originalEvent.pageY
+          pageY: _originalEvent.pageY,
         };
 
         // Zoom from the triggering point of the event
@@ -445,6 +461,7 @@ export default {
     }
 
     self.played = true;
+    self.onLoadWhenPlay = load;
     $.addClass(player, 'viewer-show');
 
     $.each(self.items, (item, i) => {
@@ -453,7 +470,7 @@ export default {
 
       image.src = $.getData(img, 'originalUrl');
       image.alt = img.getAttribute('alt');
-      total++;
+      total += 1;
 
       $.addClass(image, 'viewer-fade');
       $.toggleClass(image, 'viewer-transition', options.transition);
@@ -464,7 +481,9 @@ export default {
       }
 
       list.push(image);
-      $.addListener(image, 'load', load, true);
+      $.addListener(image, 'load', load, {
+        once: true,
+      });
       $.appendChild(player, image);
     });
 
@@ -472,7 +491,7 @@ export default {
       const playing = () => {
         self.playing = setTimeout(() => {
           $.removeClass(list[index], 'viewer-in');
-          index++;
+          index += 1;
           index = index < total ? index : 0;
           $.addClass(list[index], 'viewer-in');
 
@@ -503,6 +522,11 @@ export default {
 
     self.played = false;
     clearTimeout(self.playing);
+    $.each($.getByTag(self.player, 'img'), (image) => {
+      if (!image.complete) {
+        $.removeListener(image, 'load', self.onLoadWhenPlay);
+      }
+    });
     $.removeClass(player, 'viewer-show');
     $.empty(player);
 
@@ -533,7 +557,7 @@ export default {
     $.addClass(viewer, 'viewer-fixed');
     viewer.setAttribute('style', '');
     $.setStyle(viewer, {
-      zIndex: options.zIndex
+      zIndex: options.zIndex,
     });
 
     self.initContainer();
@@ -576,7 +600,7 @@ export default {
 
     $.removeClass(viewer, 'viewer-fixed');
     $.setStyle(viewer, {
-      zIndex: options.zIndexInline
+      zIndex: options.zIndexInline,
     });
 
     self.viewerData = $.extend({}, self.parentData);
@@ -618,7 +642,10 @@ export default {
         $.addClass(tooltipBox, 'viewer-show');
         $.addClass(tooltipBox, 'viewer-fade');
         $.addClass(tooltipBox, 'viewer-transition');
-        $.forceReflow(tooltipBox);
+
+        // Force reflow to enable CSS3 transition
+        // eslint-disable-next-line
+        tooltipBox.offsetWidth;
         $.addClass(tooltipBox, 'viewer-in');
       } else {
         $.addClass(tooltipBox, 'viewer-show');
@@ -634,7 +661,9 @@ export default {
           $.removeClass(tooltipBox, 'viewer-fade');
           $.removeClass(tooltipBox, 'viewer-transition');
           self.fading = false;
-        }, true);
+        }, {
+          once: true,
+        });
 
         $.removeClass(tooltipBox, 'viewer-in');
         self.fading = true;
@@ -700,7 +729,7 @@ export default {
       });
 
       $.setStyle(self.list, {
-        width: 'auto'
+        width: 'auto',
       });
 
       self.initList();

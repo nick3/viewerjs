@@ -62,7 +62,9 @@ class Viewer {
     }
 
     if ($.isFunction(options.ready)) {
-      $.addListener(element, 'ready', options.ready, true);
+      $.addListener(element, 'ready', options.ready, {
+        once: true,
+      });
     }
 
     // Override `transition` option if it is not supported
@@ -82,13 +84,17 @@ class Viewer {
 
       $.addListener(element, 'ready', () => {
         self.view();
-      }, true);
+      }, {
+        once: true,
+      });
 
       $.each(images, (image) => {
         if (image.complete) {
           progress();
         } else {
-          $.addListener(image, 'load', progress, true);
+          $.addListener(image, 'load', progress, {
+            once: true,
+          });
         }
       });
     } else {
@@ -99,7 +105,7 @@ class Viewer {
   progress() {
     const self = this;
 
-    self.count++;
+    self.count += 1;
 
     if (self.count === self.length) {
       self.build();
@@ -115,24 +121,25 @@ class Viewer {
       return;
     }
 
+    const parent = options.parent || element.parentNode;
     const template = document.createElement('div');
-    let parent;
-    let viewer;
-    let button;
-    let toolbar;
-    let navbar;
-    let title;
 
     template.innerHTML = TEMPLATE;
 
-    self.parent = parent = options.parent || element.parentNode;
-    self.viewer = viewer = $.getByClass(template, 'viewer-container')[0];
+    const viewer = $.getByClass(template, 'viewer-container')[0];
+    const title = $.getByClass(viewer, 'viewer-title')[0];
+    const toolbar = $.getByClass(viewer, 'viewer-toolbar')[0];
+    const navbar = $.getByClass(viewer, 'viewer-navbar')[0];
+    const button = $.getByClass(viewer, 'viewer-button')[0];
+
+    self.parent = parent;
+    self.viewer = viewer;
+    self.title = title;
+    self.toolbar = toolbar;
+    self.navbar = navbar;
+    self.button = button;
     self.canvas = $.getByClass(viewer, 'viewer-canvas')[0];
     self.footer = $.getByClass(viewer, 'viewer-footer')[0];
-    self.title = title = $.getByClass(viewer, 'viewer-title')[0];
-    self.toolbar = toolbar = $.getByClass(viewer, 'viewer-toolbar')[0];
-    self.navbar = navbar = $.getByClass(viewer, 'viewer-navbar')[0];
-    self.button = button = $.getByClass(viewer, 'viewer-button')[0];
     self.tooltipBox = $.getByClass(viewer, 'viewer-tooltip')[0];
     self.player = $.getByClass(viewer, 'viewer-player')[0];
     self.list = $.getByClass(viewer, 'viewer-list')[0];
@@ -156,14 +163,16 @@ class Viewer {
     if (options.inline) {
       $.addClass(button, 'viewer-fullscreen');
       $.setStyle(viewer, {
-        zIndex: options.zIndexInline
+        zIndex: options.zIndexInline,
       });
 
       if ($.getStyle(parent).position === 'static') {
         $.setStyle(parent, {
-          position: 'relative'
+          position: 'relative',
         });
       }
+
+      parent.insertBefore(viewer, element.nextSibling);
     } else {
       $.addClass(button, 'viewer-close');
       $.addClass(viewer, 'viewer-fixed');
@@ -171,12 +180,11 @@ class Viewer {
       $.addClass(viewer, 'viewer-hide');
 
       $.setStyle(viewer, {
-        zIndex: options.zIndex
+        zIndex: options.zIndex,
       });
-    }
 
-    // Inserts the viewer after to the current element
-    parent.insertBefore(viewer, options.parent ? null : element.nextSibling);
+      document.body.appendChild(viewer);
+    }
 
     if (options.inline) {
       self.render();

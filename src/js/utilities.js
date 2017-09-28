@@ -94,7 +94,7 @@ export function each(obj, callback) {
     if (isArray(obj) || isNumber(obj.length)/* array-like */) {
       const length = obj.length;
 
-      for (i = 0; i < length; i++) {
+      for (i = 0; i < length; i += 1) {
         if (callback.call(obj, obj[i], i, obj) === false) {
           break;
         }
@@ -264,46 +264,52 @@ export function removeData(element, name) {
   }
 }
 
-export function removeListener(element, type, handler) {
+export function removeListener(element, type, listener, options = {}) {
   const types = trim(type).split(REGEXP_SPACES);
 
   if (types.length > 1) {
     each(types, (t) => {
-      removeListener(element, t, handler);
+      removeListener(element, t, listener);
     });
     return;
+  }
+
+  if (isFunction(listener.onceListener)) {
+    listener = listener.onceListener;
+    delete listener.onceListener;
   }
 
   if (element.removeEventListener) {
-    element.removeEventListener(type, handler, false);
+    element.removeEventListener(type, listener, options);
   } else if (element.detachEvent) {
-    element.detachEvent(`on${type}`, handler);
+    element.detachEvent(`on${type}`, listener);
   }
 }
 
-export function addListener(element, type, handler, once) {
+export function addListener(element, type, listener, options = {}) {
   const types = trim(type).split(REGEXP_SPACES);
-  const originalHandler = handler;
 
   if (types.length > 1) {
     each(types, (t) => {
-      addListener(element, t, handler);
+      addListener(element, t, listener);
     });
     return;
   }
 
-  if (once) {
-    handler = (...args) => {
-      removeListener(element, type, handler);
-
-      return originalHandler.apply(element, args);
+  if (options.once) {
+    const originalListener = listener;
+    const onceListener = (...args) => {
+      removeListener(element, type, onceListener);
+      return originalListener.apply(element, args);
     };
+    originalListener.onceListener = onceListener;
+    listener = onceListener;
   }
 
   if (element.addEventListener) {
-    element.addEventListener(type, handler, false);
+    element.addEventListener(type, listener, options);
   } else if (element.attachEvent) {
-    element.attachEvent(`on${type}`, handler);
+    element.attachEvent(`on${type}`, listener);
   }
 }
 
@@ -428,11 +434,6 @@ export function setText(element, text) {
   }
 }
 
-// Force reflow to enable CSS3 transition
-export function forceReflow(element) {
-  return element.offsetWidth;
-}
-
 // e.g.: http://domain.com/path/to/picture.jpg?size=1280×960 -> picture.jpg
 export function getImageName(url) {
   return isString(url) ? url.replace(/^.*\//, '').replace(/[?&#].*$/, '') : '';
@@ -486,6 +487,8 @@ export function getResponsiveClass(option) {
 
     case 4:
       return 'viewer-hide-md-down';
+
+    default:
   }
 
   return '';
@@ -494,7 +497,7 @@ export function getResponsiveClass(option) {
 export function getPointer(pointer, endOnly) {
   const end = {
     endX: pointer.pageX,
-    endY: pointer.pageY
+    endY: pointer.pageY,
   };
 
   if (endOnly) {
@@ -503,7 +506,7 @@ export function getPointer(pointer, endOnly) {
 
   return extend({
     startX: pointer.pageX,
-    startY: pointer.pageY
+    startY: pointer.pageY,
   }, end);
 }
 

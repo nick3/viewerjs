@@ -27,7 +27,9 @@ export default {
     self.bind();
 
     if ($.isFunction(options.shown)) {
-      $.addListener(element, 'shown', options.shown, true);
+      $.addListener(element, 'shown', options.shown, {
+        once: true,
+      });
     }
 
     $.dispatchEvent(element, 'shown');
@@ -49,7 +51,9 @@ export default {
     self.resetImage();
 
     if ($.isFunction(options.hidden)) {
-      $.addListener(element, 'hidden', options.hidden, true);
+      $.addListener(element, 'hidden', options.hidden, {
+        once: true,
+      });
     }
 
     $.dispatchEvent(element, 'hidden');
@@ -97,7 +101,6 @@ export default {
     const offsetY = pointer.endY - pointer.startY;
 
     switch (self.action) {
-
       // Move the current image
       case 'move':
         self.move(offsetX, offsetY);
@@ -121,7 +124,7 @@ export default {
 
         break;
 
-      // No default
+      default:
     }
 
     // Override
@@ -139,5 +142,5 @@ export default {
     return self.length > 1 && imageData.left >= 0 && imageData.top >= 0 &&
       imageData.width <= viewerData.width &&
       imageData.height <= viewerData.height;
-  }
+  },
 };

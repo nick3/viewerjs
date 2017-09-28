@@ -26,10 +26,12 @@ export default {
     let viewerData;
 
     if (options.inline) {
-      self.parentData = viewerData = {
+      viewerData = {
         width: Math.max(parent.offsetWidth, options.minWidth),
         height: Math.max(parent.offsetHeight, options.minHeight),
       };
+
+      self.parentData = viewerData;
     }
 
     if (self.fulled || !viewerData) {
@@ -79,7 +81,7 @@ export default {
             ` data-original-url="${(url || src)}"` +
             ` alt="${alt}"` +
           '>' +
-        '</li>'
+        '</li>',
       );
     });
 
@@ -87,7 +89,9 @@ export default {
 
     $.each($.getByTag(list, 'img'), (image) => {
       $.setData(image, 'filled', true);
-      $.addListener(image, 'load', $.proxy(self.loadImage, self), true);
+      $.addListener(image, 'load', $.proxy(self.loadImage, self), {
+        once: true,
+      });
     });
 
     self.items = $.getByTag(list, 'li');
@@ -95,7 +99,9 @@ export default {
     if (options.transition) {
       $.addListener(element, 'viewed', () => {
         $.addClass(list, 'viewer-transition');
-      }, true);
+      }, {
+        once: true,
+      });
     }
   },
 
@@ -108,7 +114,7 @@ export default {
     // Place the active item in the center of the screen
     $.setStyle(self.list, {
       width: outerWidth * self.length,
-      marginLeft: ((self.viewerData.width - width) / 2) - (outerWidth * i)
+      marginLeft: ((self.viewerData.width - width) / 2) - (outerWidth * i),
     });
   },
 
@@ -118,7 +124,7 @@ export default {
     $.empty(self.list);
     $.removeClass(self.list, 'viewer-transition');
     $.setStyle({
-      marginLeft: 0
+      marginLeft: 0,
     });
   },
 
@@ -197,7 +203,9 @@ export default {
 
     if ($.isFunction(callback)) {
       if (self.transitioning) {
-        $.addListener(image, 'transitionend', callback, true);
+        $.addListener(image, 'transitionend', callback, {
+          once: true,
+        });
       } else {
         callback();
       }
