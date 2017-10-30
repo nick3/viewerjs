@@ -771,8 +771,11 @@ export default {
       if (self.visible) {
         self.unbind();
       }
-
-      $.removeListener(element, 'click', self.onStart);
+      try {
+        self.onStart && $.removeListener(element, 'click', self.onStart);
+      } catch (error) {
+        console.error('destroy Viewer', error)
+      }
     }
 
     self.unbuild();

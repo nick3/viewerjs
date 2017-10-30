@@ -5,7 +5,7 @@
  * Copyright (c) 2017 Fengyuan Chen
  * Released under the MIT license
  *
- * Date: 2017-09-28T03:09:14.766Z
+ * Date: 2017-10-30T10:18:49.895Z
  */
 
 'use strict';
@@ -2089,8 +2089,11 @@ var methods = {
       if (self.visible) {
         self.unbind();
       }
-
-      removeListener(element, 'click', self.onStart);
+      try {
+        self.onStart && removeListener(element, 'click', self.onStart);
+      } catch (error) {
+        console.error('destroy Viewer', error);
+      }
     }
 
     self.unbuild();
