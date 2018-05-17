@@ -5,7 +5,7 @@
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Viewer.js</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
   <link rel="stylesheet" href="../dist/viewer.css">
   <style>
     .pictures {
@@ -31,7 +31,6 @@
   </style>
 </head>
 <body>
-
   <div class="container">
     <h1>Viewer in a Bootstraop modal</h1>
 
@@ -46,7 +45,9 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="modalLabel">Viewer</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
           <div class="modal-body">
             <div id="galley">
@@ -71,20 +72,26 @@
     </div>
   </div>
 
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js"></script>
   <script src="../dist/viewer.js"></script>
   <script>
     window.addEventListener('DOMContentLoaded', function () {
       var galley = document.getElementById('galley');
       var viewer;
 
-      $('#modal').on('shown.bs.modal', function () {
-        viewer = new Viewer(galley, {
-          url: 'data-original',
-        });
-      }).on('hidden.bs.modal', function () {
-        viewer.destroy();
+      $('#modal').on('shown.bs.modal', function (e) {
+        // WARNING: should ignore Viewer's `shown` event here.
+        if(e.namespace === 'bs.modal') {
+          viewer = new Viewer(galley, {
+            url: 'data-original',
+          });
+        }
+      }).on('hidden.bs.modal', function (e) {
+        // WARNING: should ignore Viewer's `hidden` event here.
+        if(e.namespace === 'bs.modal') {
+          viewer.destroy();
+        }
       });
     });
   </script>

@@ -1,28 +1,43 @@
-import * as $ from './utilities';
+import {
+  CLASS_LOADING,
+  CLASS_TRANSITION,
+  EVENT_LOAD,
+  EVENT_TRANSITION_END,
+  EVENT_VIEWED,
+} from './constants';
+import {
+  addClass,
+  addListener,
+  assign,
+  forEach,
+  getImageNameFromURL,
+  getImageNaturalSizes,
+  getTransforms,
+  isFunction,
+  isString,
+  removeClass,
+  removeListener,
+  setData,
+  setStyle,
+} from './utilities';
 
 export default {
   render() {
-    const self = this;
-
-    self.initContainer();
-    self.initViewer();
-    self.initList();
-    self.renderViewer();
+    this.initContainer();
+    this.initViewer();
+    this.initList();
+    this.renderViewer();
   },
 
   initContainer() {
-    const self = this;
-
-    self.containerData = {
+    this.containerData = {
       width: window.innerWidth,
       height: window.innerHeight,
     };
   },
 
   initViewer() {
-    const self = this;
-    const options = self.options;
-    const parent = self.parent;
+    const { options, parent } = this;
     let viewerData;
 
     if (options.inline) {
@@ -31,74 +46,76 @@ export default {
         height: Math.max(parent.offsetHeight, options.minHeight),
       };
 
-      self.parentData = viewerData;
+      this.parentData = viewerData;
     }
 
-    if (self.fulled || !viewerData) {
-      viewerData = self.containerData;
+    if (this.fulled || !viewerData) {
+      viewerData = this.containerData;
     }
 
-    self.viewerData = $.extend({}, viewerData);
+    this.viewerData = assign({}, viewerData);
   },
 
   renderViewer() {
-    const self = this;
-
-    if (self.options.inline && !self.fulled) {
-      $.setStyle(self.viewer, self.viewerData);
+    if (this.options.inline && !this.fulled) {
+      setStyle(this.viewer, this.viewerData);
     }
   },
 
   initList() {
-    const self = this;
-    const options = self.options;
-    const element = self.element;
-    const list = self.list;
+    const { element, options, list } = this;
     const items = [];
 
-    $.each(self.images, (image, i) => {
-      const src = image.src;
-      const alt = image.alt || $.getImageName(src);
-      let url = options.url;
+    forEach(this.images, (image, i) => {
+      const { src } = image;
+      const alt = image.alt || getImageNameFromURL(src);
+      let { url } = options;
 
-      if (!src) {
-        return;
-      }
-
-      if ($.isString(url)) {
+      if (isString(url)) {
         url = image.getAttribute(url);
-      } else if ($.isFunction(url)) {
-        url = url.call(image, image);
+      } else if (isFunction(url)) {
+        url = url.call(this, image);
       }
 
-      items.push(
-        '<li>' +
+      if (src || url) {
+        items.push('<li>' +
           '<img' +
-            ` src="${src}"` +
+            ` src="${src || url}"` +
             ' role="button"' +
-            ' data-action="view"' +
+            ' data-viewer-action="view"' +
             ` data-index="${i}"` +
-            ` data-original-url="${(url || src)}"` +
+            ` data-original-url="${url || src}"` +
             ` alt="${alt}"` +
           '>' +
-        '</li>',
-      );
+        '</li>');
+      }
     });
 
     list.innerHTML = items.join('');
+    this.items = list.getElementsByTagName('li');
+    forEach(this.items, (item) => {
+      const image = item.firstElementChild;
 
-    $.each($.getByTag(list, 'img'), (image) => {
-      $.setData(image, 'filled', true);
-      $.addListener(image, 'load', $.proxy(self.loadImage, self), {
+      setData(image, 'filled', true);
+
+      if (options.loading) {
+        addClass(item, CLASS_LOADING);
+      }
+
+      addListener(image, EVENT_LOAD, (event) => {
+        if (options.loading) {
+          removeClass(item, CLASS_LOADING);
+        }
+
+        this.loadImage(event);
+      }, {
         once: true,
       });
     });
 
-    self.items = $.getByTag(list, 'li');
-
     if (options.transition) {
-      $.addListener(element, 'viewed', () => {
-        $.addClass(list, 'viewer-transition');
+      addListener(element, EVENT_VIEWED, () => {
+        addClass(list, CLASS_TRANSITION);
       }, {
         once: true,
       });
@@ -106,42 +123,48 @@ export default {
   },
 
   renderList(index) {
-    const self = this;
-    const i = index || self.index;
-    const width = self.items[i].offsetWidth || 30;
+    const i = index || this.index;
+    const width = this.items[i].offsetWidth || 30;
     const outerWidth = width + 1; // 1 pixel of `margin-left` width
 
     // Place the active item in the center of the screen
-    $.setStyle(self.list, {
-      width: outerWidth * self.length,
-      marginLeft: ((self.viewerData.width - width) / 2) - (outerWidth * i),
-    });
+    setStyle(this.list, assign({
+      width: outerWidth * this.length,
+    }, getTransforms({
+      translateX: ((this.viewerData.width - width) / 2) - (outerWidth * i),
+    })));
   },
 
   resetList() {
-    const self = this;
+    const { list } = this;
 
-    $.empty(self.list);
-    $.removeClass(self.list, 'viewer-transition');
-    $.setStyle({
-      marginLeft: 0,
-    });
+    list.innerHTML = '';
+    removeClass(list, CLASS_TRANSITION);
+    setStyle(list, getTransforms({
+      translateX: 0,
+    }));
   },
 
-  initImage(callback) {
-    const self = this;
-    const options = self.options;
-    const image = self.image;
-    const viewerData = self.viewerData;
-    const footerHeight = self.footer.offsetHeight;
+  initImage(done) {
+    const { options, image, viewerData } = this;
+    const footerHeight = this.footer.offsetHeight;
     const viewerWidth = viewerData.width;
     const viewerHeight = Math.max(viewerData.height - footerHeight, footerHeight);
-    const oldImageData = self.imageData || {};
+    const oldImageData = this.imageData || {};
+    let sizingImage;
 
-    $.getImageSize(image, (naturalWidth, naturalHeight) => {
+    this.imageInitializing = {
+      abort() {
+        sizingImage.onload = null;
+      },
+    };
+
+    sizingImage = getImageNaturalSizes(image, (naturalWidth, naturalHeight) => {
       const aspectRatio = naturalWidth / naturalHeight;
       let width = viewerWidth;
       let height = viewerHeight;
+
+      this.imageInitializing = false;
 
       if (viewerHeight * aspectRatio > viewerWidth) {
         height = viewerWidth / aspectRatio;
@@ -162,7 +185,7 @@ export default {
         left: (viewerWidth - width) / 2,
         top: (viewerHeight - height) / 2,
       };
-      const initialImageData = $.extend({}, imageData);
+      const initialImageData = assign({}, imageData);
 
       if (options.rotatable) {
         imageData.rotate = oldImageData.rotate || 0;
@@ -176,49 +199,58 @@ export default {
         initialImageData.scaleY = 1;
       }
 
-      self.imageData = imageData;
-      self.initialImageData = initialImageData;
+      this.imageData = imageData;
+      this.initialImageData = initialImageData;
 
-      if ($.isFunction(callback)) {
-        callback();
+      if (done) {
+        done();
       }
     });
   },
 
-  renderImage(callback) {
-    const self = this;
-    const image = self.image;
-    const imageData = self.imageData;
-    const transform = $.getTransform(imageData);
+  renderImage(done) {
+    const { image, imageData } = this;
 
-    $.setStyle(image, {
+    setStyle(image, assign({
       width: imageData.width,
       height: imageData.height,
       marginLeft: imageData.left,
       marginTop: imageData.top,
-      WebkitTransform: transform,
-      msTransform: transform,
-      transform,
-    });
+    }, getTransforms(imageData)));
 
-    if ($.isFunction(callback)) {
-      if (self.transitioning) {
-        $.addListener(image, 'transitionend', callback, {
+    if (done) {
+      if (this.viewing && this.options.transition) {
+        const onTransitionEnd = () => {
+          this.imageRendering = false;
+          done();
+        };
+
+        this.imageRendering = {
+          abort() {
+            removeListener(image, EVENT_TRANSITION_END, onTransitionEnd);
+          },
+        };
+
+        addListener(image, EVENT_TRANSITION_END, onTransitionEnd, {
           once: true,
         });
       } else {
-        callback();
+        done();
       }
     }
   },
 
   resetImage() {
-    const self = this;
-
     // this.image only defined after viewed
-    if (self.image) {
-      $.removeChild(self.image);
-      self.image = null;
+    if (this.viewing || this.viewed) {
+      const { image } = this;
+
+      if (this.viewing) {
+        this.viewing.abort();
+      }
+
+      image.parentNode.removeChild(image);
+      this.image = null;
     }
   },
 };

@@ -1,43 +1,67 @@
-// RegExps
-const REGEXP_HYPHENATE = /([a-z\d])([A-Z])/g;
-const REGEXP_SPACES = /\s+/;
-const REGEXP_SUFFIX = /^(width|height|left|top|marginLeft|marginTop)$/;
-const REGEXP_TRIM = /^\s+(.*)\s+$/;
+import {
+  CLASS_HIDE_MD_DOWN,
+  CLASS_HIDE_SM_DOWN,
+  CLASS_HIDE_XS_DOWN,
+  IN_BROWSER,
+  WINDOW,
+} from './constants';
 
-// Utilities
-const objectProto = Object.prototype;
-const toString = objectProto.toString;
-const hasOwnProperty = objectProto.hasOwnProperty;
-const slice = Array.prototype.slice;
-
-export function typeOf(obj) {
-  return toString.call(obj).slice(8, -1).toLowerCase();
+/**
+ * Check if the given value is a string.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is a string, else `false`.
+ */
+export function isString(value) {
+  return typeof value === 'string';
 }
 
-export function isString(str) {
-  return typeof str === 'string';
+/**
+ * Check if the given value is not a number.
+ */
+export const isNaN = Number.isNaN || WINDOW.isNaN;
+
+/**
+ * Check if the given value is a number.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is a number, else `false`.
+ */
+export function isNumber(value) {
+  return typeof value === 'number' && !isNaN(value);
 }
 
-export function isNumber(num) {
-  return typeof num === 'number' && !isNaN(num);
+/**
+ * Check if the given value is undefined.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is undefined, else `false`.
+ */
+export function isUndefined(value) {
+  return typeof value === 'undefined';
 }
 
-export function isUndefined(obj) {
-  return typeof obj === 'undefined';
+/**
+ * Check if the given value is an object.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is an object, else `false`.
+ */
+export function isObject(value) {
+  return typeof value === 'object' && value !== null;
 }
 
-export function isObject(obj) {
-  return typeof obj === 'object' && obj !== null;
-}
+const { hasOwnProperty } = Object.prototype;
 
-export function isPlainObject(obj) {
-  if (!isObject(obj)) {
+/**
+ * Check if the given value is a plain object.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is a plain object, else `false`.
+ */
+export function isPlainObject(value) {
+  if (!isObject(value)) {
     return false;
   }
 
   try {
-    const constructor = obj.constructor;
-    const prototype = constructor.prototype;
+    const { constructor } = value;
+    const { prototype } = constructor;
 
     return constructor && prototype && hasOwnProperty.call(prototype, 'isPrototypeOf');
   } catch (e) {
@@ -45,76 +69,50 @@ export function isPlainObject(obj) {
   }
 }
 
-export function isFunction(fn) {
-  return typeOf(fn) === 'function';
+/**
+ * Check if the given value is a function.
+ * @param {*} value - The value to check.
+ * @returns {boolean} Returns `true` if the given value is a function, else `false`.
+ */
+export function isFunction(value) {
+  return typeof value === 'function';
 }
 
-export function isArray(arr) {
-  return Array.isArray ? Array.isArray(arr) : typeOf(arr) === 'array';
-}
-
-export function toArray(obj, offset) {
-  offset = offset >= 0 ? offset : 0;
-
-  if (Array.from) {
-    return Array.from(obj).slice(offset);
-  }
-
-  return slice.call(obj, offset);
-}
-
-export function inArray(value, arr) {
-  let index = -1;
-
-  if (arr.indexOf) {
-    return arr.indexOf(value);
-  }
-
-  arr.forEach((n, i) => {
-    if (n === value) {
-      index = i;
-    }
-  });
-
-  return index;
-}
-
-export function trim(str) {
-  if (isString(str)) {
-    str = str.trim ? str.trim() : str.replace(REGEXP_TRIM, '1');
-  }
-
-  return str;
-}
-
-export function each(obj, callback) {
-  if (obj && isFunction(callback)) {
-    let i;
-
-    if (isArray(obj) || isNumber(obj.length)/* array-like */) {
-      const length = obj.length;
+/**
+ * Iterate the given data.
+ * @param {*} data - The data to iterate.
+ * @param {Function} callback - The process function for each element.
+ * @returns {*} The original data.
+ */
+export function forEach(data, callback) {
+  if (data && isFunction(callback)) {
+    if (Array.isArray(data) || isNumber(data.length)/* array-like */) {
+      const { length } = data;
+      let i;
 
       for (i = 0; i < length; i += 1) {
-        if (callback.call(obj, obj[i], i, obj) === false) {
+        if (callback.call(data, data[i], i, data) === false) {
           break;
         }
       }
-    } else if (isObject(obj)) {
-      Object.keys(obj).forEach((key) => {
-        callback.call(obj, obj[key], key, obj);
+    } else if (isObject(data)) {
+      Object.keys(data).forEach((key) => {
+        callback.call(data, data[key], key, data);
       });
     }
   }
 
-  return obj;
+  return data;
 }
 
-export function extend(obj, ...args) {
+/**
+ * Extend the given object.
+ * @param {*} obj - The object to be extended.
+ * @param {*} args - The rest objects which will be merged to the first object.
+ * @returns {Object} The extended object.
+ */
+export const assign = Object.assign || function assign(obj, ...args) {
   if (isObject(obj) && args.length > 0) {
-    if (Object.assign) {
-      return Object.assign(obj, ...args);
-    }
-
     args.forEach((arg) => {
       if (isObject(arg)) {
         Object.keys(arg).forEach((key) => {
@@ -125,18 +123,19 @@ export function extend(obj, ...args) {
   }
 
   return obj;
-}
+};
 
-export function proxy(fn, context, ...args) {
-  return (...args2) => {
-    return fn.apply(context, args.concat(args2));
-  };
-}
+const REGEXP_SUFFIX = /^(?:width|height|left|top|marginLeft|marginTop)$/;
 
+/**
+ * Apply styles to the given element.
+ * @param {Element} element - The target element.
+ * @param {Object} styles - The styles for applying.
+ */
 export function setStyle(element, styles) {
-  const style = element.style;
+  const { style } = element;
 
-  each(styles, (value, property) => {
+  forEach(styles, (value, property) => {
     if (REGEXP_SUFFIX.test(property) && isNumber(value)) {
       value += 'px';
     }
@@ -145,25 +144,30 @@ export function setStyle(element, styles) {
   });
 }
 
-export function getStyle(element) {
-  return window.getComputedStyle ?
-    window.getComputedStyle(element, null) :
-    element.currentStyle;
-}
-
+/**
+ * Check if the given element has a special class.
+ * @param {Element} element - The element to check.
+ * @param {string} value - The class to search.
+ * @returns {boolean} Returns `true` if the special class was found.
+ */
 export function hasClass(element, value) {
   return element.classList ?
     element.classList.contains(value) :
     element.className.indexOf(value) > -1;
 }
 
+/**
+ * Add classes to the given element.
+ * @param {Element} element - The target element.
+ * @param {string} value - The classes to be added.
+ */
 export function addClass(element, value) {
   if (!value) {
     return;
   }
 
   if (isNumber(element.length)) {
-    each(element, (elem) => {
+    forEach(element, (elem) => {
       addClass(elem, value);
     });
     return;
@@ -174,7 +178,7 @@ export function addClass(element, value) {
     return;
   }
 
-  const className = trim(element.className);
+  const className = element.className.trim();
 
   if (!className) {
     element.className = value;
@@ -183,13 +187,18 @@ export function addClass(element, value) {
   }
 }
 
+/**
+ * Remove classes from the given element.
+ * @param {Element} element - The target element.
+ * @param {string} value - The classes to be removed.
+ */
 export function removeClass(element, value) {
   if (!value) {
     return;
   }
 
   if (isNumber(element.length)) {
-    each(element, (elem) => {
+    forEach(element, (elem) => {
       removeClass(elem, value);
     });
     return;
@@ -205,13 +214,19 @@ export function removeClass(element, value) {
   }
 }
 
+/**
+ * Add or remove classes from the given element.
+ * @param {Element} element - The target element.
+ * @param {string} value - The classes to be toggled.
+ * @param {boolean} added - Add only.
+ */
 export function toggleClass(element, value, added) {
   if (!value) {
     return;
   }
 
   if (isNumber(element.length)) {
-    each(element, (elem) => {
+    forEach(element, (elem) => {
       toggleClass(elem, value, added);
     });
     return;
@@ -225,10 +240,23 @@ export function toggleClass(element, value, added) {
   }
 }
 
-export function hyphenate(str) {
-  return str.replace(REGEXP_HYPHENATE, '$1-$2').toLowerCase();
+const REGEXP_HYPHENATE = /([a-z\d])([A-Z])/g;
+
+/**
+ * Transform the given string from camelCase to kebab-case
+ * @param {string} value - The value to transform.
+ * @returns {string} The transformed value.
+ */
+export function hyphenate(value) {
+  return value.replace(REGEXP_HYPHENATE, '$1-$2').toLowerCase();
 }
 
+/**
+ * Get data from the given element.
+ * @param {Element} element - The target element.
+ * @param {string} name - The data key to get.
+ * @returns {string} The data value.
+ */
 export function getData(element, name) {
   if (isObject(element[name])) {
     return element[name];
@@ -239,6 +267,12 @@ export function getData(element, name) {
   return element.getAttribute(`data-${hyphenate(name)}`);
 }
 
+/**
+ * Set data to the given element.
+ * @param {Element} element - The target element.
+ * @param {string} name - The data key to set.
+ * @param {string} data - The data value.
+ */
 export function setData(element, name, data) {
   if (isObject(data)) {
     element[name] = data;
@@ -249,275 +283,306 @@ export function setData(element, name, data) {
   }
 }
 
+/**
+ * Remove data from the given element.
+ * @param {Element} element - The target element.
+ * @param {string} name - The data key to remove.
+ */
 export function removeData(element, name) {
   if (isObject(element[name])) {
-    delete element[name];
+    try {
+      delete element[name];
+    } catch (e) {
+      element[name] = undefined;
+    }
   } else if (element.dataset) {
     // #128 Safari not allows to delete dataset property
     try {
       delete element.dataset[name];
     } catch (e) {
-      element.dataset[name] = null;
+      element.dataset[name] = undefined;
     }
   } else {
     element.removeAttribute(`data-${hyphenate(name)}`);
   }
 }
 
+const REGEXP_SPACES = /\s\s*/;
+const onceSupported = (() => {
+  let supported = false;
+
+  if (IN_BROWSER) {
+    let once = false;
+    const listener = () => {};
+    const options = Object.defineProperty({}, 'once', {
+      get() {
+        supported = true;
+        return once;
+      },
+
+      /**
+       * This setter can fix a `TypeError` in strict mode
+       * {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Getter_only}
+       * @param {boolean} value - The value to set
+       */
+      set(value) {
+        once = value;
+      },
+    });
+
+    WINDOW.addEventListener('test', listener, options);
+    WINDOW.removeEventListener('test', listener, options);
+  }
+
+  return supported;
+})();
+
+/**
+ * Remove event listener from the target element.
+ * @param {Element} element - The event target.
+ * @param {string} type - The event type(s).
+ * @param {Function} listener - The event listener.
+ * @param {Object} options - The event options.
+ */
 export function removeListener(element, type, listener, options = {}) {
-  const types = trim(type).split(REGEXP_SPACES);
+  let handler = listener;
 
-  if (types.length > 1) {
-    each(types, (t) => {
-      removeListener(element, t, listener);
-    });
-    return;
-  }
+  type.trim().split(REGEXP_SPACES).forEach((event) => {
+    if (!onceSupported) {
+      const { listeners } = element;
 
-  if (isFunction(listener.onceListener)) {
-    listener = listener.onceListener;
-    delete listener.onceListener;
-  }
+      if (listeners && listeners[event] && listeners[event][listener]) {
+        handler = listeners[event][listener];
+        delete listeners[event][listener];
 
-  if (element.removeEventListener) {
-    element.removeEventListener(type, listener, options);
-  } else if (element.detachEvent) {
-    element.detachEvent(`on${type}`, listener);
-  }
-}
+        if (Object.keys(listeners[event]).length === 0) {
+          delete listeners[event];
+        }
 
-export function addListener(element, type, listener, options = {}) {
-  const types = trim(type).split(REGEXP_SPACES);
-
-  if (types.length > 1) {
-    each(types, (t) => {
-      addListener(element, t, listener);
-    });
-    return;
-  }
-
-  if (options.once) {
-    const originalListener = listener;
-    const onceListener = (...args) => {
-      removeListener(element, type, onceListener);
-      return originalListener.apply(element, args);
-    };
-    originalListener.onceListener = onceListener;
-    listener = onceListener;
-  }
-
-  if (element.addEventListener) {
-    element.addEventListener(type, listener, options);
-  } else if (element.attachEvent) {
-    element.attachEvent(`on${type}`, listener);
-  }
-}
-
-export function dispatchEvent(element, type, data) {
-  if (element.dispatchEvent) {
-    let event;
-
-    // Event and CustomEvent on IE9-11 are global objects, not constructors
-    if (isFunction(Event) && isFunction(CustomEvent)) {
-      if (isUndefined(data)) {
-        event = new Event(type, {
-          bubbles: true,
-          cancelable: true,
-        });
-      } else {
-        event = new CustomEvent(type, {
-          detail: data,
-          bubbles: true,
-          cancelable: true,
-        });
+        if (Object.keys(listeners).length === 0) {
+          delete element.listeners;
+        }
       }
-    } else if (isUndefined(data)) {
-      event = document.createEvent('Event');
-      event.initEvent(type, true, true);
-    } else {
-      event = document.createEvent('CustomEvent');
-      event.initCustomEvent(type, true, true, data);
     }
 
-    // IE9+
-    return element.dispatchEvent(event);
-  } else if (element.fireEvent) {
-    // IE6-10 (native events only)
-    return element.fireEvent(`on${type}`);
-  }
-
-  return true;
+    element.removeEventListener(event, handler, options);
+  });
 }
 
-export function getEvent(event) {
-  const e = event || window.event;
+/**
+ * Add event listener to the target element.
+ * @param {Element} element - The event target.
+ * @param {string} type - The event type(s).
+ * @param {Function} listener - The event listener.
+ * @param {Object} options - The event options.
+ */
+export function addListener(element, type, listener, options = {}) {
+  let handler = listener;
 
-  // Fix target property (IE8)
-  if (!e.target) {
-    e.target = e.srcElement || document;
-  }
+  type.trim().split(REGEXP_SPACES).forEach((event) => {
+    if (options.once && !onceSupported) {
+      const { listeners = {} } = element;
 
-  if (!isNumber(e.pageX) && isNumber(e.clientX)) {
-    const eventDoc = event.target.ownerDocument || document;
-    const doc = eventDoc.documentElement;
-    const body = eventDoc.body;
+      handler = (...args) => {
+        delete listeners[event][listener];
+        element.removeEventListener(event, handler, options);
+        listener.apply(element, args);
+      };
 
-    e.pageX = e.clientX + (
-      ((doc && doc.scrollLeft) || (body && body.scrollLeft) || 0) -
-      ((doc && doc.clientLeft) || (body && body.clientLeft) || 0)
-    );
-    e.pageY = e.clientY + (
-      ((doc && doc.scrollTop) || (body && body.scrollTop) || 0) -
-      ((doc && doc.clientTop) || (body && body.clientTop) || 0)
-    );
-  }
+      if (!listeners[event]) {
+        listeners[event] = {};
+      }
 
-  return e;
+      if (listeners[event][listener]) {
+        element.removeEventListener(event, listeners[event][listener], options);
+      }
+
+      listeners[event][listener] = handler;
+      element.listeners = listeners;
+    }
+
+    element.addEventListener(event, handler, options);
+  });
 }
 
+/**
+ * Dispatch event on the target element.
+ * @param {Element} element - The event target.
+ * @param {string} type - The event type(s).
+ * @param {Object} data - The additional event data.
+ * @returns {boolean} Indicate if the event is default prevented or not.
+ */
+export function dispatchEvent(element, type, data) {
+  let event;
+
+  // Event and CustomEvent on IE9-11 are global objects, not constructors
+  if (isFunction(Event) && isFunction(CustomEvent)) {
+    event = new CustomEvent(type, {
+      detail: data,
+      bubbles: true,
+      cancelable: true,
+    });
+  } else {
+    event = document.createEvent('CustomEvent');
+    event.initCustomEvent(type, true, true, data);
+  }
+
+  return element.dispatchEvent(event);
+}
+
+/**
+ * Get the offset base on the document.
+ * @param {Element} element - The target element.
+ * @returns {Object} The offset data.
+ */
 export function getOffset(element) {
-  const doc = document.documentElement;
   const box = element.getBoundingClientRect();
 
   return {
-    left: box.left + (
-      (window.scrollX || (doc && doc.scrollLeft) || 0) - ((doc && doc.clientLeft) || 0)
-    ),
-    top: box.top + (
-      (window.scrollY || (doc && doc.scrollTop) || 0) - ((doc && doc.clientTop) || 0)
-    ),
+    left: box.left + (window.pageXOffset - document.documentElement.clientLeft),
+    top: box.top + (window.pageYOffset - document.documentElement.clientTop),
   };
 }
 
-export function getByTag(element, tagName) {
-  return element.getElementsByTagName(tagName);
-}
+/**
+ * Get transforms base on the given object.
+ * @param {Object} obj - The target object.
+ * @returns {string} A string contains transform values.
+ */
+export function getTransforms({
+  rotate,
+  scaleX,
+  scaleY,
+  translateX,
+  translateY,
+}) {
+  const values = [];
 
-export function getByClass(element, className) {
-  return element.getElementsByClassName ?
-    element.getElementsByClassName(className) :
-    element.querySelectorAll(`.${className}`);
-}
-
-export function createElement(tagName) {
-  return document.createElement(tagName);
-}
-
-export function appendChild(element, elem) {
-  if (elem.length) {
-    each(elem, (el) => {
-      appendChild(element, el);
-    });
-    return;
+  if (isNumber(translateX) && translateX !== 0) {
+    values.push(`translateX(${translateX}px)`);
   }
 
-  element.appendChild(elem);
-}
-
-export function removeChild(element) {
-  if (element.parentNode) {
-    element.parentNode.removeChild(element);
+  if (isNumber(translateY) && translateY !== 0) {
+    values.push(`translateY(${translateY}px)`);
   }
-}
-
-export function empty(element) {
-  while (element.firstChild) {
-    element.removeChild(element.firstChild);
-  }
-}
-
-export function setText(element, text) {
-  if (!isUndefined(element.textContent)) {
-    element.textContent = text;
-  } else {
-    element.innerText = text;
-  }
-}
-
-// e.g.: http://domain.com/path/to/picture.jpg?size=1280×960 -> picture.jpg
-export function getImageName(url) {
-  return isString(url) ? url.replace(/^.*\//, '').replace(/[?&#].*$/, '') : '';
-}
-
-export function getImageSize(image, callback) {
-  // Modern browsers
-  if (image.naturalWidth) {
-    callback(image.naturalWidth, image.naturalHeight);
-    return;
-  }
-
-  const newImage = document.createElement('img');
-
-  newImage.onload = function load() {
-    callback(this.width, this.height);
-  };
-
-  newImage.src = image.src;
-}
-
-export function getTransform(data) {
-  const transforms = [];
-  const rotate = data.rotate;
-  const scaleX = data.scaleX;
-  const scaleY = data.scaleY;
 
   // Rotate should come first before scale to match orientation transform
   if (isNumber(rotate) && rotate !== 0) {
-    transforms.push(`rotate(${rotate}deg)`);
+    values.push(`rotate(${rotate}deg)`);
   }
 
   if (isNumber(scaleX) && scaleX !== 1) {
-    transforms.push(`scaleX(${scaleX})`);
+    values.push(`scaleX(${scaleX})`);
   }
 
   if (isNumber(scaleY) && scaleY !== 1) {
-    transforms.push(`scaleY(${scaleY})`);
+    values.push(`scaleY(${scaleY})`);
   }
 
-  return transforms.length ? transforms.join(' ') : 'none';
+  const transform = values.length ? values.join(' ') : 'none';
+
+  return {
+    WebkitTransform: transform,
+    msTransform: transform,
+    transform,
+  };
 }
 
-export function getResponsiveClass(option) {
-  switch (option) {
-    case 2:
-      return 'viewer-hide-xs-down';
+/**
+ * Get an image name from an image url.
+ * @param {string} url - The target url.
+ * @example
+ * // picture.jpg
+ * getImageNameFromURL('http://domain.com/path/to/picture.jpg?size=1280×960')
+ * @returns {string} A string contains the image name.
+ */
+export function getImageNameFromURL(url) {
+  return isString(url) ? url.replace(/^.*\//, '').replace(/[?&#].*$/, '') : '';
+}
 
-    case 3:
-      return 'viewer-hide-sm-down';
+const IS_SAFARI = WINDOW.navigator && /(Macintosh|iPhone|iPod|iPad).*AppleWebKit/i.test(WINDOW.navigator.userAgent);
 
-    case 4:
-      return 'viewer-hide-md-down';
+/**
+ * Get an image's natural sizes.
+ * @param {string} image - The target image.
+ * @param {Function} callback - The callback function.
+ * @returns {HTMLImageElement} The new image.
+ */
+export function getImageNaturalSizes(image, callback) {
+  const newImage = document.createElement('img');
 
-    default:
+  // Modern browsers (except Safari)
+  if (image.naturalWidth && !IS_SAFARI) {
+    callback(image.naturalWidth, image.naturalHeight);
+    return newImage;
   }
 
-  return '';
-}
+  const body = document.body || document.documentElement;
 
-export function getPointer(pointer, endOnly) {
-  const end = {
-    endX: pointer.pageX,
-    endY: pointer.pageY,
+  newImage.onload = () => {
+    callback(newImage.width, newImage.height);
+
+    if (!IS_SAFARI) {
+      body.removeChild(newImage);
+    }
   };
 
-  if (endOnly) {
-    return end;
+  newImage.src = image.src;
+
+  // iOS Safari will convert the image automatically
+  // with its orientation once append it into DOM
+  if (!IS_SAFARI) {
+    newImage.style.cssText = (
+      'left:0;' +
+      'max-height:none!important;' +
+      'max-width:none!important;' +
+      'min-height:0!important;' +
+      'min-width:0!important;' +
+      'opacity:0;' +
+      'position:absolute;' +
+      'top:0;' +
+      'z-index:-1;'
+    );
+    body.appendChild(newImage);
   }
 
-  return extend({
-    startX: pointer.pageX,
-    startY: pointer.pageY,
-  }, end);
+  return newImage;
 }
 
+/**
+ * Get the related class name of a responsive type number.
+ * @param {string} type - The responsive type.
+ * @returns {string} The related class name.
+ */
+export function getResponsiveClass(type) {
+  switch (type) {
+    case 2:
+      return CLASS_HIDE_XS_DOWN;
+
+    case 3:
+      return CLASS_HIDE_SM_DOWN;
+
+    case 4:
+      return CLASS_HIDE_MD_DOWN;
+
+    default:
+      return '';
+  }
+}
+
+/**
+ * Get the max ratio of a group of pointers.
+ * @param {string} pointers - The target pointers.
+ * @returns {number} The result ratio.
+ */
 export function getMaxZoomRatio(pointers) {
-  const pointers2 = extend({}, pointers);
+  const pointers2 = assign({}, pointers);
   const ratios = [];
 
-  each(pointers, (pointer, pointerId) => {
+  forEach(pointers, (pointer, pointerId) => {
     delete pointers2[pointerId];
 
-    each(pointers2, (pointer2) => {
+    forEach(pointers2, (pointer2) => {
       const x1 = Math.abs(pointer.startX - pointer2.startX);
       const y1 = Math.abs(pointer.startY - pointer2.startY);
       const x2 = Math.abs(pointer.endX - pointer2.endX);
@@ -530,21 +595,42 @@ export function getMaxZoomRatio(pointers) {
     });
   });
 
-  ratios.sort((a, b) => {
-    return Math.abs(a) < Math.abs(b);
-  });
+  ratios.sort((a, b) => Math.abs(a) < Math.abs(b));
 
   return ratios[0];
 }
 
+/**
+ * Get a pointer from an event object.
+ * @param {Object} event - The target event object.
+ * @param {boolean} endOnly - Indicates if only returns the end point coordinate or not.
+ * @returns {Object} The result pointer contains start and/or end point coordinates.
+ */
+export function getPointer({ pageX, pageY }, endOnly) {
+  const end = {
+    endX: pageX,
+    endY: pageY,
+  };
+
+  return endOnly ? end : assign({
+    startX: pageX,
+    startY: pageY,
+  }, end);
+}
+
+/**
+ * Get the center point coordinate of a group of pointers.
+ * @param {Object} pointers - The target pointers.
+ * @returns {Object} The center point coordinate.
+ */
 export function getPointersCenter(pointers) {
   let pageX = 0;
   let pageY = 0;
   let count = 0;
 
-  each(pointers, (pointer) => {
-    pageX += pointer.startX;
-    pageY += pointer.startY;
+  forEach(pointers, ({ startX, startY }) => {
+    pageX += startX;
+    pageY += startY;
     count += 1;
   });
 

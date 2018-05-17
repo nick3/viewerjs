@@ -35,11 +35,20 @@ export default {
   // Enable to request fullscreen when play
   fullscreen: true,
 
+  // The amount of time to delay between automatically cycling an image when playing.
+  interval: 5000,
+
   // Enable keyboard support
   keyboard: true,
 
-  // Define interval of each image when playing
-  interval: 5000,
+  // Enable a modal backdrop, specify `static` for a backdrop which doesn't close the modal on click
+  backdrop: true,
+
+  // Indicate if show a loading spinner when load image or not.
+  loading: true,
+
+  // Indicate if enable loop viewing or not.
+  loop: true,
 
   // Min width of the viewer in inline mode
   minWidth: 200,
@@ -65,6 +74,14 @@ export default {
   // Define where to get the original image URL for viewing
   // Type: String (an image attribute) or Function (should return an image URL)
   url: 'src',
+
+  // Define where to put the viewer in modal mode.
+  // Type: String | Element
+  container: 'body',
+
+  // Filter the images for viewing.
+  // Type: Function (return true if the image is viewable)
+  filter: null,
 
   // Event shortcuts
   ready: null,

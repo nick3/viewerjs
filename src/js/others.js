@@ -1,70 +1,93 @@
-import * as $ from './utilities';
+import {
+  ACTION_MOVE,
+  ACTION_SWITCH,
+  ACTION_ZOOM,
+  CLASS_HIDE,
+  CLASS_OPEN,
+  EVENT_HIDDEN,
+  EVENT_SHOWN,
+} from './constants';
+import {
+  addClass,
+  addListener,
+  dispatchEvent,
+  forEach,
+  getMaxZoomRatio,
+  isFunction,
+  removeClass,
+} from './utilities';
 
 export default {
   open() {
-    const body = this.body;
+    const { body } = this;
 
-    $.addClass(body, 'viewer-open');
-    body.style.paddingRight = `${this.scrollbarWidth}px`;
+    addClass(body, CLASS_OPEN);
+
+    body.style.paddingRight = `${this.scrollbarWidth + (parseFloat(this.initialBodyPaddingRight) || 0)}px`;
   },
 
   close() {
-    const body = this.body;
+    const { body } = this;
 
-    $.removeClass(body, 'viewer-open');
-    body.style.paddingRight = 0;
+    removeClass(body, CLASS_OPEN);
+    body.style.paddingRight = this.initialBodyPaddingRight;
   },
 
   shown() {
-    const self = this;
-    const options = self.options;
-    const element = self.element;
+    const { element, options } = this;
 
-    self.transitioning = false;
-    self.fulled = true;
-    self.visible = true;
-    self.render();
-    self.bind();
+    this.fulled = true;
+    this.isShown = true;
+    this.render();
+    this.bind();
+    this.showing = false;
 
-    if ($.isFunction(options.shown)) {
-      $.addListener(element, 'shown', options.shown, {
+    if (isFunction(options.shown)) {
+      addListener(element, EVENT_SHOWN, options.shown, {
         once: true,
       });
     }
 
-    $.dispatchEvent(element, 'shown');
+    if (dispatchEvent(element, EVENT_SHOWN) === false) {
+      return;
+    }
+
+    if (this.ready && this.isShown && !this.hiding) {
+      this.view(this.index);
+    }
   },
 
   hidden() {
-    const self = this;
-    const options = self.options;
-    const element = self.element;
+    const { element, options } = this;
 
-    self.transitioning = false;
-    self.viewed = false;
-    self.fulled = false;
-    self.visible = false;
-    self.unbind();
-    self.close();
-    $.addClass(self.viewer, 'viewer-hide');
-    self.resetList();
-    self.resetImage();
+    this.fulled = false;
+    this.viewed = false;
+    this.isShown = false;
+    this.close();
+    this.unbind();
+    addClass(this.viewer, CLASS_HIDE);
+    this.resetList();
+    this.resetImage();
+    this.hiding = false;
 
-    if ($.isFunction(options.hidden)) {
-      $.addListener(element, 'hidden', options.hidden, {
-        once: true,
-      });
+    if (!this.destroyed) {
+      if (isFunction(options.hidden)) {
+        addListener(element, EVENT_HIDDEN, options.hidden, {
+          once: true,
+        });
+      }
+
+      dispatchEvent(element, EVENT_HIDDEN);
     }
-
-    $.dispatchEvent(element, 'hidden');
   },
 
   requestFullscreen() {
-    const self = this;
-    const documentElement = document.documentElement;
+    const document = this.element.ownerDocument;
 
-    if (self.fulled && !document.fullscreenElement && !document.mozFullScreenElement &&
+    if (this.fulled && !document.fullscreenElement && !document.mozFullScreenElement &&
       !document.webkitFullscreenElement && !document.msFullscreenElement) {
+      const { documentElement } = document;
+
       if (documentElement.requestFullscreen) {
         documentElement.requestFullscreen();
       } else if (documentElement.msRequestFullscreen) {
@@ -78,9 +101,9 @@ export default {
   },
 
   exitFullscreen() {
-    const self = this;
+    if (this.fulled) {
+      const document = this.element.ownerDocument;
 
-    if (self.fulled) {
       if (document.exitFullscreen) {
         document.exitFullscreen();
       } else if (document.msExitFullscreen) {
@@ -94,31 +117,33 @@ export default {
   },
 
   change(e) {
-    const self = this;
-    const pointers = self.pointers;
+    const { options, pointers } = this;
     const pointer = pointers[Object.keys(pointers)[0]];
     const offsetX = pointer.endX - pointer.startX;
     const offsetY = pointer.endY - pointer.startY;
 
-    switch (self.action) {
+    switch (this.action) {
       // Move the current image
-      case 'move':
-        self.move(offsetX, offsetY);
+      case ACTION_MOVE:
+        this.move(offsetX, offsetY);
         break;
 
       // Zoom the current image
-      case 'zoom':
-        self.zoom($.getMaxZoomRatio(pointers), false, e);
+      case ACTION_ZOOM:
+        this.zoom(getMaxZoomRatio(pointers), false, e);
         break;
 
-      case 'switch':
-        self.action = 'switched';
+      case ACTION_SWITCH:
+        this.action = 'switched';
+
+        // Empty `pointers` as `touchend` event will not be fired after swiped in iOS browsers.
+        this.pointers = {};
 
         if (Math.abs(offsetX) > Math.abs(offsetY)) {
           if (offsetX > 1) {
-            self.prev();
+            this.prev(options.loop);
           } else if (offsetX < -1) {
-            self.next();
+            this.next(options.loop);
           }
         }
 
@@ -128,18 +153,16 @@ export default {
     }
 
     // Override
-    $.each(pointers, (p) => {
+    forEach(pointers, (p) => {
       p.startX = p.endX;
       p.startY = p.endY;
     });
   },
 
   isSwitchable() {
-    const self = this;
-    const imageData = self.imageData;
-    const viewerData = self.viewerData;
+    const { imageData, viewerData } = this;
 
-    return self.length > 1 && imageData.left >= 0 && imageData.top >= 0 &&
+    return this.length > 1 && imageData.left >= 0 && imageData.top >= 0 &&
       imageData.width <= viewerData.width &&
       imageData.height <= viewerData.height;
   },

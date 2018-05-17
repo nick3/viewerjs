@@ -1,16 +1,69 @@
 # Changelog
 
+## next (Apr 22, 2018)
+
+- Add namespace to data attribute names (from `data-*` to `data-viewer-*`) to avoid side effect.
+- Make sure the image data is a non-null object to avoid unexpected errors.
+
+## 1.0.0 (Apr 1, 2018)
+
+- Add in browser checking to support to import in Node.js.
+- Cancel update when there are no images when call the `update` method.
+
+## 1.0.0-rc.1 (Mar 13, 2018)
+
+- Fix the wrong image switching behavior in iOS browsers.
+- Fix a `TypeError` in strict mode (#149).
+- Fix type definitions issue of the `show` and `hide` methods.
+
+## 1.0.0-rc (Mar 10, 2018)
+
+- Add a new option: `loading`.
+- Add type definitions file for TypeScript.
+- Enhance the `show`, `hide` and `play` methods.
+- Change the default value of `loop` option from `false` to `true`.
+
+## 1.0.0-beta.2 (Feb 13, 2018)
+
+- Add a new option: `container`.
+- Recover the missing default value of the `interval` option (#133).
+
+## 1.0.0-beta.1 (Dec 23, 2017)
+
+- Add a new option: `backdrop`.
+
+## 1.0.0-beta (Dec 12, 2017)
+
+- Add `style` field to `package.json`.
+- Fix the issue of NodeList deconstructing (#118).
+- Fall back to `document.documentElement` if `document.body` is not existing (#120).
+
+## 0.10.0 (Nov 5, 2017)
+
+- Add a new option: `loop`.
+- Enhance toolbar customization.
+
+## 0.9.0 (Nov 4, 2017)
+
+- Add a new option: `filter`.
+- Enhance the `prev` and `next` methods (#47).
+- Support to customize the layout of toolbar (#79).
+- Disallow to show again if it had shown.
+
+## 0.8.0 (Oct 8, 2017)
+
+- Refactor - separate constants, simplify utilities, and so on.
+- Stop play after exited fullscreen.
+- Improve JSDoc.
 
 ## 0.7.2 (Aug 19, 2017)
 
 - Ignore mouse down event when the viewer is hiding (#70).
 - Fixed multiple active items in navbar (#75).
 
-
 ## 0.7.1 (May 14, 2017)
 
 - Support to use Viewer in a modal (#39).
-
 
 ## 0.7.0 (Apr 30, 2017)
 
@@ -18,27 +71,22 @@
 - Added `module` and `browser` fields to `package.json`.
 - Fixed an issue of touch zoom.
 
-
 ## 0.6.2 (Mar 4, 2017)
 
 - Fixed the issue of touch and move problem (#63).
 
-
 ## 0.6.1 (Feb 18, 2017)
 
 - Prevented the default behaviour of drag action (#63).
-
 
 ## 0.6.0 (Jan 24, 2017)
 
 - Ported JavaScript code to ECMAScript 6.
 - Ported CSS code to CSSNext.
 
-
 ## 0.5.1 (Jan 2, 2017)
 
 - Improved event handler for Pointer Events.
-
 
 ## 0.5.0 (July 22, 2016)
 
@@ -47,28 +95,23 @@
 - Rename `built` event to `ready`.
 - Fixed a bug of `data-*` attributes setting and getting (#33).
 
-
 ## 0.4.0 (Mar 20, 2016)
 
 - Added some properties to "event.detail" of the "view" and "viewed" events.
-
 
 ## 0.3.3 (Mar 19, 2016)
 
 - Fix the issue of hiding wrong element in the "view" method (#19).
 
-
 ## 0.3.2 (Mar 11, 2016)
 
 - Fix the parameters error on the "url" option when it is a function.
-
 
 ## 0.3.1 (Feb 2, 2016)
 
 - Added tests.
 - Ignored invalid class name.
 - Re-render image only when viewed.
-
 
 ## 0.3.0 (Jan 21, 2016)
 
@@ -77,19 +120,16 @@
 - Exit fullscreen when stop playing.
 - Fixed title not generated bug.
 
-
 ## 0.2.0 (Jan 1, 2016)
 
 - Added "update" method for update image dynamically.
 - Hides title and toolbar on small screen (width < 768px).
-
 
 ## 0.1.1 (Dec 28, 2015)
 
 - Supports to zoom from event triggering point.
 - Optimized "toggle" method.
 - Fixed a bug of the index of viewing image.
-
 
 ## 0.1.0 (Dec 24, 2015)
 

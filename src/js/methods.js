@@ -1,270 +1,403 @@
-import * as $ from './utilities';
+import {
+  CLASS_ACTIVE,
+  CLASS_FADE,
+  CLASS_FIXED,
+  CLASS_FULLSCREEN_EXIT,
+  CLASS_HIDE,
+  CLASS_IN,
+  CLASS_INVISIBLE,
+  CLASS_LOADING,
+  CLASS_SHOW,
+  CLASS_TRANSITION,
+  EVENT_CLICK,
+  EVENT_HIDE,
+  EVENT_LOAD,
+  EVENT_SHOW,
+  EVENT_TRANSITION_END,
+  EVENT_VIEW,
+  EVENT_VIEWED,
+  NAMESPACE,
+} from './constants';
+import {
+  addClass,
+  addListener,
+  assign,
+  dispatchEvent,
+  forEach,
+  getData,
+  getOffset,
+  getPointersCenter,
+  hasClass,
+  isFunction,
+  isNumber,
+  isUndefined,
+  removeClass,
+  removeData,
+  removeListener,
+  setStyle,
+  toggleClass,
+} from './utilities';
 
 export default {
-  // Show the viewer (only available in modal mode)
-  show() {
-    const self = this;
-    const options = self.options;
-    const element = self.element;
+  /** Show the viewer (only available in modal mode)
+   * @param {boolean} [immediate=false] - Indicates if show the viewer immediately or not.
+   * @returns {Viewer} this
+   */
+  show(immediate = false) {
+    const { element, options } = this;
 
-    if (options.inline || self.transitioning) {
-      return self;
+    if (options.inline || this.showing || this.isShown || this.showing) {
+      return this;
     }
 
-    if (!self.ready) {
-      self.build();
+    if (!this.ready) {
+      this.build();
+
+      if (this.ready) {
+        this.show(immediate);
+      }
+
+      return this;
     }
 
-    if ($.isFunction(options.show)) {
-      $.addListener(element, 'show', options.show, {
+    if (isFunction(options.show)) {
+      addListener(element, EVENT_SHOW, options.show, {
         once: true,
       });
     }
 
-    if ($.dispatchEvent(element, 'show') === false) {
-      return self;
+    if (dispatchEvent(element, EVENT_SHOW) === false || !this.ready) {
+      return this;
     }
 
-    self.open();
+    if (this.hiding) {
+      this.transitioning.abort();
+    }
 
-    const viewer = self.viewer;
+    this.showing = true;
+    this.open();
 
-    $.removeClass(viewer, 'viewer-hide');
-    $.addListener(element, 'shown', () => {
-      self.view(self.target ? $.inArray(self.target, $.toArray(self.images)) : self.index);
-      self.target = false;
-    }, {
-      once: true,
-    });
+    const { viewer } = this;
 
-    if (options.transition) {
-      self.transitioning = true;
-      $.addClass(viewer, 'viewer-transition');
+    removeClass(viewer, CLASS_HIDE);
+
+    if (options.transition && !immediate) {
+      const shown = this.shown.bind(this);
+
+      this.transitioning = {
+        abort() {
+          removeListener(viewer, EVENT_TRANSITION_END, shown);
+          removeClass(viewer, CLASS_IN);
+        },
+      };
+
+      addClass(viewer, CLASS_TRANSITION);
 
       // Force reflow to enable CSS3 transition
       // eslint-disable-next-line
       viewer.offsetWidth;
-      $.addListener(viewer, 'transitionend', $.proxy(self.shown, self), {
+      addListener(viewer, EVENT_TRANSITION_END, shown, {
         once: true,
       });
-      $.addClass(viewer, 'viewer-in');
+      addClass(viewer, CLASS_IN);
     } else {
-      $.addClass(viewer, 'viewer-in');
-      self.shown();
+      addClass(viewer, CLASS_IN);
+      this.shown();
     }
 
-    return self;
+    return this;
   },
 
-  // Hide the viewer (only available in modal mode)
-  hide() {
-    const self = this;
-    const options = self.options;
-    const element = self.element;
-    const viewer = self.viewer;
+  /**
+   * Hide the viewer (only available in modal mode)
+   * @param {boolean} [immediate=false] - Indicates if hide the viewer immediately or not.
+   * @returns {Viewer} this
+   */
+  hide(immediate = false) {
+    const { element, options } = this;
 
-    if (options.inline || self.transitioning || !self.visible) {
-      return self;
+    if (options.inline || this.hiding || !(this.isShown || this.showing)) {
+      return this;
     }
 
-    if ($.isFunction(options.hide)) {
-      $.addListener(element, 'hide', options.hide, {
+    if (isFunction(options.hide)) {
+      addListener(element, EVENT_HIDE, options.hide, {
         once: true,
       });
     }
 
-    if ($.dispatchEvent(element, 'hide') === false) {
-      return self;
+    if (dispatchEvent(element, EVENT_HIDE) === false) {
+      return this;
     }
 
-    if (self.viewed && options.transition) {
-      self.transitioning = true;
-      $.addListener(self.image, 'transitionend', () => {
-        $.addListener(viewer, 'transitionend', $.proxy(self.hidden, self), {
+    if (this.showing) {
+      this.transitioning.abort();
+    }
+
+    this.hiding = true;
+
+    if (this.played) {
+      this.stop();
+    } else if (this.viewing) {
+      this.viewing.abort();
+    }
+
+    const { viewer } = this;
+
+    if (options.transition && !immediate) {
+      const hidden = this.hidden.bind(this);
+      const hide = () => {
+        addListener(viewer, EVENT_TRANSITION_END, hidden, {
           once: true,
         });
-        $.removeClass(viewer, 'viewer-in');
-      }, {
-        once: true,
-      });
-      self.zoomTo(0, false, false, true);
+        removeClass(viewer, CLASS_IN);
+      };
+
+      this.transitioning = {
+        abort() {
+          if (this.viewed) {
+            removeListener(this.image, EVENT_TRANSITION_END, hide);
+          } else {
+            removeListener(viewer, EVENT_TRANSITION_END, hidden);
+          }
+        },
+      };
+
+      if (this.viewed) {
+        addListener(this.image, EVENT_TRANSITION_END, hide, {
+          once: true,
+        });
+        this.zoomTo(0, false, false, true);
+      } else {
+        hide();
+      }
     } else {
-      $.removeClass(viewer, 'viewer-in');
-      self.hidden();
+      removeClass(viewer, CLASS_IN);
+      this.hidden();
     }
 
-    return self;
+    return this;
   },
 
   /**
    * View one of the images with image's index
-   *
-   * @param {Number} index
+   * @param {number} index - The index of the image to view.
+   * @returns {Viewer} this
    */
-  view(index) {
-    const self = this;
-    const element = self.element;
-    const title = self.title;
-    const canvas = self.canvas;
-
+  view(index = 0) {
     index = Number(index) || 0;
 
-    if (!self.ready || !self.visible || self.played || index < 0 || index >= self.length ||
-      (self.viewed && index === self.index)) {
-      return self;
+    if (!this.isShown) {
+      this.index = index;
+      return this.show();
     }
 
-    const item = self.items[index];
-    const img = $.getByTag(item, 'img')[0];
-    const url = $.getData(img, 'originalUrl');
+    if (this.hiding || this.played || index < 0 || index >= this.length ||
+      (this.viewed && index === this.index)) {
+      return this;
+    }
+
+    if (this.viewing) {
+      this.viewing.abort();
+    }
+
+    const {
+      element,
+      options,
+      title,
+      canvas,
+    } = this;
+    const item = this.items[index];
+    const img = item.querySelector('img');
+    const url = getData(img, 'originalUrl');
     const alt = img.getAttribute('alt');
     const image = document.createElement('img');
 
     image.src = url;
     image.alt = alt;
 
-    if ($.dispatchEvent(element, 'view', {
-      originalImage: self.images[index],
-      index,
-      image,
-    }) === false) {
-      return self;
+    if (isFunction(options.view)) {
+      addListener(element, EVENT_VIEW, options.view, {
+        once: true,
+      });
     }
 
-    self.image = image;
+    if (dispatchEvent(element, EVENT_VIEW, {
+      originalImage: this.images[index],
+      index,
+      image,
+    }) === false || !this.isShown || this.hiding || this.played) {
+      return this;
+    }
 
-    $.removeClass(self.items[self.index], 'viewer-active');
-    $.addClass(item, 'viewer-active');
+    this.image = image;
+    removeClass(this.items[this.index], CLASS_ACTIVE);
+    addClass(item, CLASS_ACTIVE);
+    this.viewed = false;
+    this.index = index;
+    this.imageData = {};
+    addClass(image, CLASS_INVISIBLE);
 
-    self.viewed = false;
-    self.index = index;
-    self.imageData = null;
+    if (options.loading) {
+      addClass(canvas, CLASS_LOADING);
+    }
 
-    $.addClass(image, 'viewer-invisible');
-    $.empty(canvas);
-    $.appendChild(canvas, image);
+    canvas.innerHTML = '';
+    canvas.appendChild(image);
 
     // Center current item
-    self.renderList();
+    this.renderList();
 
     // Clear title
-    $.empty(title);
+    title.innerHTML = '';
 
     // Generate title after viewed
-    $.addListener(element, 'viewed', () => {
-      const imageData = self.imageData;
+    const onViewed = () => {
+      const { imageData } = this;
 
-      $.setText(title, `${alt} (${imageData.naturalWidth} × ${imageData.naturalHeight})`);
-    }, {
+      title.textContent = `${alt} (${imageData.naturalWidth} × ${imageData.naturalHeight})`;
+    };
+    let onLoad;
+
+    addListener(element, EVENT_VIEWED, onViewed, {
       once: true,
     });
 
+    this.viewing = {
+      abort() {
+        removeListener(element, EVENT_VIEWED, onViewed);
+
+        if (image.complete) {
+          if (this.imageRendering) {
+            this.imageRendering.abort();
+          } else if (this.imageInitializing) {
+            this.imageInitializing.abort();
+          }
+        } else {
+          removeListener(image, EVENT_LOAD, onLoad);
+
+          if (this.timeout) {
+            clearTimeout(this.timeout);
+          }
+        }
+      },
+    };
+
     if (image.complete) {
-      self.load();
+      this.load();
     } else {
-      $.addListener(image, 'load', $.proxy(self.load, self), {
+      addListener(image, EVENT_LOAD, onLoad = this.load.bind(this), {
         once: true,
       });
 
-      if (self.timeout) {
-        clearTimeout(self.timeout);
+      if (this.timeout) {
+        clearTimeout(this.timeout);
       }
 
       // Make the image visible if it fails to load within 1s
-      self.timeout = setTimeout(() => {
-        $.removeClass(image, 'viewer-invisible');
-        self.timeout = false;
+      this.timeout = setTimeout(() => {
+        removeClass(image, CLASS_INVISIBLE);
+        this.timeout = false;
       }, 1000);
     }
 
-    return self;
-  },
-
-  // View the previous image
-  prev() {
-    const self = this;
-
-    self.view(Math.max(self.index - 1, 0));
-
-    return self;
-  },
-
-  // View the next image
-  next() {
-    const self = this;
-
-    self.view(Math.min(self.index + 1, self.length - 1));
-
-    return self;
+    return this;
   },
 
   /**
-   * Move the image with relative offsets
-   *
-   * @param {Number} offsetX
-   * @param {Number} offsetY (optional)
+   * View the previous image
+   * @param {boolean} [loop=false] - Indicate if view the last one
+   * when it is the first one at present.
+   * @returns {Viewer} this
+   */
+  prev(loop = false) {
+    let index = this.index - 1;
+
+    if (index < 0) {
+      index = loop ? this.length - 1 : 0;
+    }
+
+    this.view(index);
+    return this;
+  },
+
+  /**
+   * View the next image
+   * @param {boolean} [loop=false] - Indicate if view the first one
+   * when it is the last one at present.
+   * @returns {Viewer} this
+   */
+  next(loop = false) {
+    const maxIndex = this.length - 1;
+    let index = this.index + 1;
+
+    if (index > maxIndex) {
+      index = loop ? 0 : maxIndex;
+    }
+
+    this.view(index);
+    return this;
+  },
+
+  /**
+   * Move the image with relative offsets.
+   * @param {number} offsetX - The relative offset distance on the x-axis.
+   * @param {number} offsetY - The relative offset distance on the y-axis.
+   * @returns {Viewer} this
    */
   move(offsetX, offsetY) {
-    const self = this;
-    const imageData = self.imageData;
+    const { imageData } = this;
 
-    self.moveTo(
-      $.isUndefined(offsetX) ? offsetX : imageData.left + Number(offsetX),
-      $.isUndefined(offsetY) ? offsetY : imageData.top + Number(offsetY),
+    this.moveTo(
+      isUndefined(offsetX) ? offsetX : imageData.left + Number(offsetX),
+      isUndefined(offsetY) ? offsetY : imageData.top + Number(offsetY),
     );
 
-    return self;
+    return this;
   },
 
   /**
-   * Move the image to an absolute point
-   *
-   * @param {Number} x
-   * @param {Number} y (optional)
+   * Move the image to an absolute point.
+   * @param {number} x - The x-axis coordinate.
+   * @param {number} [y=x] - The y-axis coordinate.
+   * @returns {Viewer} this
    */
-  moveTo(x, y) {
-    const self = this;
-    const imageData = self.imageData;
-
-    // If "y" is not present, its default value is "x"
-    if ($.isUndefined(y)) {
-      y = x;
-    }
+  moveTo(x, y = x) {
+    const { imageData } = this;
 
     x = Number(x);
     y = Number(y);
 
-    if (self.viewed && !self.played && self.options.movable) {
+    if (this.viewed && !this.played && this.options.movable) {
       let changed = false;
 
-      if ($.isNumber(x)) {
+      if (isNumber(x)) {
         imageData.left = x;
         changed = true;
       }
 
-      if ($.isNumber(y)) {
+      if (isNumber(y)) {
         imageData.top = y;
         changed = true;
       }
 
       if (changed) {
-        self.renderImage();
+        this.renderImage();
       }
     }
 
-    return self;
+    return this;
   },
 
   /**
-   * Zoom the image with a relative ratio
-   *
-   * @param {Number} ratio
-   * @param {Boolean} hasTooltip (optional)
-   * @param {Event} _originalEvent (private)
+   * Zoom the image with a relative ratio.
+   * @param {number} ratio - The target ratio.
+   * @param {boolean} [hasTooltip=false] - Indicates if it has a tooltip or not.
+   * @param {Event} [_originalEvent=null] - The original event if any.
+   * @returns {Viewer} this
    */
-  zoom(ratio, hasTooltip, _originalEvent) {
-    const self = this;
-    const imageData = self.imageData;
+  zoom(ratio, hasTooltip = false, _originalEvent = null) {
+    const { imageData } = this;
 
     ratio = Number(ratio);
 
@@ -274,28 +407,25 @@ export default {
       ratio = 1 + ratio;
     }
 
-    self.zoomTo((imageData.width * ratio) / imageData.naturalWidth, hasTooltip, _originalEvent);
+    this.zoomTo((imageData.width * ratio) / imageData.naturalWidth, hasTooltip, _originalEvent);
 
-    return self;
+    return this;
   },
 
   /**
-   * Zoom the image to an absolute ratio
-   *
-   * @param {Number} ratio
-   * @param {Boolean} hasTooltip (optional)
-   * @param {Event} _originalEvent (private)
-   * @param {Boolean} _zoomable (private)
+   * Zoom the image to an absolute ratio.
+   * @param {number} ratio - The target ratio.
+   * @param {boolean} [hasTooltip=false] - Indicates if it has a tooltip or not.
+   * @param {Event} [_originalEvent=null] - The original event if any.
+   * @param {Event} [_zoomable=false] - Indicates if the current zoom is available or not.
+   * @returns {Viewer} this
    */
-  zoomTo(ratio, hasTooltip, _originalEvent, _zoomable) {
-    const self = this;
-    const options = self.options;
-    const pointers = self.pointers;
-    const imageData = self.imageData;
+  zoomTo(ratio, hasTooltip = false, _originalEvent = null, _zoomable = false) {
+    const { options, pointers, imageData } = this;
 
     ratio = Math.max(0, ratio);
 
-    if ($.isNumber(ratio) && self.viewed && !self.played && (_zoomable || options.zoomable)) {
+    if (isNumber(ratio) && this.viewed && !this.played && (_zoomable || options.zoomable)) {
       if (!_zoomable) {
         const minZoomRatio = Math.max(0.01, options.minZoomRatio);
         const maxZoomRatio = Math.min(100, options.maxZoomRatio);
@@ -311,8 +441,8 @@ export default {
       const newHeight = imageData.naturalHeight * ratio;
 
       if (_originalEvent) {
-        const offset = $.getOffset(self.viewer);
-        const center = pointers && Object.keys(pointers).length ? $.getPointersCenter(pointers) : {
+        const offset = getOffset(this.viewer);
+        const center = pointers && Object.keys(pointers).length ? getPointersCenter(pointers) : {
           pageX: _originalEvent.pageX,
           pageY: _originalEvent.pageY,
         };
@@ -333,391 +463,395 @@ export default {
       imageData.width = newWidth;
       imageData.height = newHeight;
       imageData.ratio = ratio;
-      self.renderImage();
+      this.renderImage();
 
       if (hasTooltip) {
-        self.tooltip();
+        this.tooltip();
       }
     }
 
-    return self;
+    return this;
   },
 
   /**
-   * Rotate the image with a relative degree
-   *
-   * @param {Number} degree
+   * Rotate the image with a relative degree.
+   * @param {number} degree - The rotate degree.
+   * @returns {Viewer} this
    */
   rotate(degree) {
-    const self = this;
+    this.rotateTo((this.imageData.rotate || 0) + Number(degree));
 
-    self.rotateTo((self.imageData.rotate || 0) + Number(degree));
-
-    return self;
+    return this;
   },
 
   /**
-   * Rotate the image to an absolute degree
-   * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#rotate()
-   *
-   * @param {Number} degree
+   * Rotate the image to an absolute degree.
+   * @param {number} degree - The rotate degree.
+   * @returns {Viewer} this
    */
   rotateTo(degree) {
-    const self = this;
-    const imageData = self.imageData;
+    const { imageData } = this;
 
     degree = Number(degree);
 
-    if ($.isNumber(degree) && self.viewed && !self.played && self.options.rotatable) {
+    if (isNumber(degree) && this.viewed && !this.played && this.options.rotatable) {
       imageData.rotate = degree;
-      self.renderImage();
+      this.renderImage();
     }
 
-    return self;
+    return this;
   },
 
   /**
-   * Scale the image
-   * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#scale()
-   *
-   * @param {Number} scaleX
-   * @param {Number} scaleY (optional)
+   * Scale the image on the x-axis.
+   * @param {number} scaleX - The scale ratio on the x-axis.
+   * @returns {Viewer} this
    */
-  scale(scaleX, scaleY) {
-    const self = this;
-    const imageData = self.imageData;
+  scaleX(scaleX) {
+    this.scale(scaleX, this.imageData.scaleY);
 
-    // If "scaleY" is not present, its default value is "scaleX"
-    if ($.isUndefined(scaleY)) {
-      scaleY = scaleX;
-    }
+    return this;
+  },
+
+  /**
+   * Scale the image on the y-axis.
+   * @param {number} scaleY - The scale ratio on the y-axis.
+   * @returns {Viewer} this
+   */
+  scaleY(scaleY) {
+    this.scale(this.imageData.scaleX, scaleY);
+
+    return this;
+  },
+
+  /**
+   * Scale the image.
+   * @param {number} scaleX - The scale ratio on the x-axis.
+   * @param {number} [scaleY=scaleX] - The scale ratio on the y-axis.
+   * @returns {Viewer} this
+   */
+  scale(scaleX, scaleY = scaleX) {
+    const { imageData } = this;
 
     scaleX = Number(scaleX);
     scaleY = Number(scaleY);
 
-    if (self.viewed && !self.played && self.options.scalable) {
+    if (this.viewed && !this.played && this.options.scalable) {
       let changed = false;
 
-      if ($.isNumber(scaleX)) {
+      if (isNumber(scaleX)) {
         imageData.scaleX = scaleX;
         changed = true;
       }
 
-      if ($.isNumber(scaleY)) {
+      if (isNumber(scaleY)) {
         imageData.scaleY = scaleY;
         changed = true;
       }
 
       if (changed) {
-        self.renderImage();
+        this.renderImage();
       }
     }
 
-    return self;
+    return this;
   },
 
   /**
-   * Scale the abscissa of the image
-   *
-   * @param {Number} scaleX
+   * Play the images
+   * @param {boolean} [fullscreen=false] - Indicate if request fullscreen or not.
+   * @returns {Viewer} this
    */
-  scaleX(scaleX) {
-    const self = this;
+  play(fullscreen = false) {
+    if (!this.isShown || this.played) {
+      return this;
+    }
 
-    self.scale(scaleX, self.imageData.scaleY);
-
-    return self;
-  },
-
-  /**
-   * Scale the ordinate of the image
-   *
-   * @param {Number} scaleY
-   */
-  scaleY(scaleY) {
-    const self = this;
-
-    self.scale(self.imageData.scaleX, scaleY);
-
-    return self;
-  },
-
-  // Play the images
-  play() {
-    const self = this;
-    const options = self.options;
-    const player = self.player;
-    const load = $.proxy(self.loadImage, self);
+    const { options, player } = this;
+    const onLoad = this.loadImage.bind(this);
     const list = [];
     let total = 0;
     let index = 0;
 
-    if (!self.visible || self.played) {
-      return self;
+    this.played = true;
+    this.onLoadWhenPlay = onLoad;
+
+    if (fullscreen) {
+      this.requestFullscreen();
     }
 
-    if (options.fullscreen) {
-      self.requestFullscreen();
-    }
-
-    self.played = true;
-    self.onLoadWhenPlay = load;
-    $.addClass(player, 'viewer-show');
-
-    $.each(self.items, (item, i) => {
-      const img = $.getByTag(item, 'img')[0];
+    addClass(player, CLASS_SHOW);
+    forEach(this.items, (item, i) => {
+      const img = item.querySelector('img');
       const image = document.createElement('img');
 
-      image.src = $.getData(img, 'originalUrl');
+      image.src = getData(img, 'originalUrl');
       image.alt = img.getAttribute('alt');
       total += 1;
+      addClass(image, CLASS_FADE);
+      toggleClass(image, CLASS_TRANSITION, options.transition);
 
-      $.addClass(image, 'viewer-fade');
-      $.toggleClass(image, 'viewer-transition', options.transition);
-
-      if ($.hasClass(item, 'viewer-active')) {
-        $.addClass(image, 'viewer-in');
+      if (hasClass(item, CLASS_ACTIVE)) {
+        addClass(image, CLASS_IN);
         index = i;
       }
 
       list.push(image);
-      $.addListener(image, 'load', load, {
+      addListener(image, EVENT_LOAD, onLoad, {
         once: true,
       });
-      $.appendChild(player, image);
+      player.appendChild(image);
     });
 
-    if ($.isNumber(options.interval) && options.interval > 0) {
-      const playing = () => {
-        self.playing = setTimeout(() => {
-          $.removeClass(list[index], 'viewer-in');
+    if (isNumber(options.interval) && options.interval > 0) {
+      const play = () => {
+        this.playing = setTimeout(() => {
+          removeClass(list[index], CLASS_IN);
           index += 1;
           index = index < total ? index : 0;
-          $.addClass(list[index], 'viewer-in');
-
-          playing();
+          addClass(list[index], CLASS_IN);
+          play();
         }, options.interval);
       };
 
       if (total > 1) {
-        playing();
+        play();
       }
     }
 
-    return self;
+    return this;
   },
 
   // Stop play
   stop() {
-    const self = this;
-    const player = self.player;
-
-    if (!self.played) {
-      return self;
+    if (!this.played) {
+      return this;
     }
 
-    if (self.options.fullscreen) {
-      self.exitFullscreen();
-    }
+    const { player } = this;
 
-    self.played = false;
-    clearTimeout(self.playing);
-    $.each($.getByTag(self.player, 'img'), (image) => {
-      if (!image.complete) {
-        $.removeListener(image, 'load', self.onLoadWhenPlay);
-      }
+    this.played = false;
+    clearTimeout(this.playing);
+    forEach(player.getElementsByTagName('img'), (image) => {
+      removeListener(image, EVENT_LOAD, this.onLoadWhenPlay);
     });
-    $.removeClass(player, 'viewer-show');
-    $.empty(player);
+    removeClass(player, CLASS_SHOW);
+    player.innerHTML = '';
+    this.exitFullscreen();
 
-    return self;
+    return this;
   },
 
   // Enter modal mode (only available in inline mode)
   full() {
-    const self = this;
-    const options = self.options;
-    const viewer = self.viewer;
-    const image = self.image;
-    const list = self.list;
+    const {
+      options,
+      viewer,
+      image,
+      list,
+    } = this;
 
-    if (!self.visible || self.played || self.fulled || !options.inline) {
-      return self;
+    if (!this.isShown || this.played || this.fulled || !options.inline) {
+      return this;
     }
 
-    self.fulled = true;
-    self.open();
-    $.addClass(self.button, 'viewer-fullscreen-exit');
+    this.fulled = true;
+    this.open();
+    addClass(this.button, CLASS_FULLSCREEN_EXIT);
 
     if (options.transition) {
-      $.removeClass(image, 'viewer-transition');
-      $.removeClass(list, 'viewer-transition');
+      removeClass(list, CLASS_TRANSITION);
+
+      if (this.viewed) {
+        removeClass(image, CLASS_TRANSITION);
+      }
     }
 
-    $.addClass(viewer, 'viewer-fixed');
+    addClass(viewer, CLASS_FIXED);
     viewer.setAttribute('style', '');
-    $.setStyle(viewer, {
+    setStyle(viewer, {
       zIndex: options.zIndex,
     });
 
-    self.initContainer();
-    self.viewerData = $.extend({}, self.containerData);
-    self.renderList();
-    self.initImage(() => {
-      self.renderImage(() => {
-        if (options.transition) {
-          setTimeout(() => {
-            $.addClass(image, 'viewer-transition');
-            $.addClass(list, 'viewer-transition');
-          }, 0);
-        }
-      });
-    });
+    this.initContainer();
+    this.viewerData = assign({}, this.containerData);
+    this.renderList();
 
-    return self;
+    if (this.viewed) {
+      this.initImage(() => {
+        this.renderImage(() => {
+          if (options.transition) {
+            setTimeout(() => {
+              addClass(image, CLASS_TRANSITION);
+              addClass(list, CLASS_TRANSITION);
+            }, 0);
+          }
+        });
+      });
+    }
+
+    return this;
   },
 
   // Exit modal mode (only available in inline mode)
   exit() {
-    const self = this;
-    const options = self.options;
-    const viewer = self.viewer;
-    const image = self.image;
-    const list = self.list;
+    const {
+      options,
+      viewer,
+      image,
+      list,
+    } = this;
 
-    if (!self.fulled) {
-      return self;
+    if (!this.isShown || this.played || !this.fulled || !options.inline) {
+      return this;
     }
 
-    self.fulled = false;
-    self.close();
-    $.removeClass(self.button, 'viewer-fullscreen-exit');
+    this.fulled = false;
+    this.close();
+    removeClass(this.button, CLASS_FULLSCREEN_EXIT);
 
     if (options.transition) {
-      $.removeClass(image, 'viewer-transition');
-      $.removeClass(list, 'viewer-transition');
+      removeClass(list, CLASS_TRANSITION);
+
+      if (this.viewed) {
+        removeClass(image, CLASS_TRANSITION);
+      }
     }
 
-    $.removeClass(viewer, 'viewer-fixed');
-    $.setStyle(viewer, {
+    removeClass(viewer, CLASS_FIXED);
+    setStyle(viewer, {
       zIndex: options.zIndexInline,
     });
 
-    self.viewerData = $.extend({}, self.parentData);
-    self.renderViewer();
-    self.renderList();
-    self.initImage(() => {
-      self.renderImage(() => {
-        if (options.transition) {
-          setTimeout(() => {
-            $.addClass(image, 'viewer-transition');
-            $.addClass(list, 'viewer-transition');
-          }, 0);
-        }
-      });
-    });
+    this.viewerData = assign({}, this.parentData);
+    this.renderViewer();
+    this.renderList();
 
-    return self;
+    if (this.viewed) {
+      this.initImage(() => {
+        this.renderImage(() => {
+          if (options.transition) {
+            setTimeout(() => {
+              addClass(image, CLASS_TRANSITION);
+              addClass(list, CLASS_TRANSITION);
+            }, 0);
+          }
+        });
+      });
+    }
+
+    return this;
   },
 
   // Show the current ratio of the image with percentage
   tooltip() {
-    const self = this;
-    const options = self.options;
-    const tooltipBox = self.tooltipBox;
-    const imageData = self.imageData;
+    const { options, tooltipBox, imageData } = this;
 
-    if (!self.viewed || self.played || !options.tooltip) {
-      return self;
+    if (!this.viewed || this.played || !options.tooltip) {
+      return this;
     }
 
-    $.setText(tooltipBox, `${Math.round(imageData.ratio * 100)}%`);
+    tooltipBox.textContent = `${Math.round(imageData.ratio * 100)}%`;
 
-    if (!self.tooltiping) {
+    if (!this.tooltipping) {
       if (options.transition) {
-        if (self.fading) {
-          $.dispatchEvent(tooltipBox, 'transitionend');
+        if (this.fading) {
+          dispatchEvent(tooltipBox, EVENT_TRANSITION_END);
         }
 
-        $.addClass(tooltipBox, 'viewer-show');
-        $.addClass(tooltipBox, 'viewer-fade');
-        $.addClass(tooltipBox, 'viewer-transition');
+        addClass(tooltipBox, CLASS_SHOW);
+        addClass(tooltipBox, CLASS_FADE);
+        addClass(tooltipBox, CLASS_TRANSITION);
 
         // Force reflow to enable CSS3 transition
         // eslint-disable-next-line
         tooltipBox.offsetWidth;
-        $.addClass(tooltipBox, 'viewer-in');
+        addClass(tooltipBox, CLASS_IN);
       } else {
-        $.addClass(tooltipBox, 'viewer-show');
+        addClass(tooltipBox, CLASS_SHOW);
       }
     } else {
-      clearTimeout(self.tooltiping);
+      clearTimeout(this.tooltipping);
     }
 
-    self.tooltiping = setTimeout(() => {
+    this.tooltipping = setTimeout(() => {
       if (options.transition) {
-        $.addListener(tooltipBox, 'transitionend', () => {
-          $.removeClass(tooltipBox, 'viewer-show');
-          $.removeClass(tooltipBox, 'viewer-fade');
-          $.removeClass(tooltipBox, 'viewer-transition');
-          self.fading = false;
+        addListener(tooltipBox, EVENT_TRANSITION_END, () => {
+          removeClass(tooltipBox, CLASS_SHOW);
+          removeClass(tooltipBox, CLASS_FADE);
+          removeClass(tooltipBox, CLASS_TRANSITION);
+          this.fading = false;
         }, {
           once: true,
         });
 
-        $.removeClass(tooltipBox, 'viewer-in');
-        self.fading = true;
+        removeClass(tooltipBox, CLASS_IN);
+        this.fading = true;
       } else {
-        $.removeClass(tooltipBox, 'viewer-show');
+        removeClass(tooltipBox, CLASS_SHOW);
       }
 
-      self.tooltiping = false;
+      this.tooltipping = false;
     }, 1000);
 
-    return self;
+    return this;
   },
 
   // Toggle the image size between its natural size and initial size
   toggle() {
-    const self = this;
-
-    if (self.imageData.ratio === 1) {
-      self.zoomTo(self.initialImageData.ratio, true);
+    if (this.imageData.ratio === 1) {
+      this.zoomTo(this.initialImageData.ratio, true);
     } else {
-      self.zoomTo(1, true);
+      this.zoomTo(1, true);
     }
 
-    return self;
+    return this;
   },
 
   // Reset the image to its initial state
   reset() {
-    const self = this;
-
-    if (self.viewed && !self.played) {
-      self.imageData = $.extend({}, self.initialImageData);
-      self.renderImage();
+    if (this.viewed && !this.played) {
+      this.imageData = assign({}, this.initialImageData);
+      this.renderImage();
     }
 
-    return self;
+    return this;
   },
 
   // Update viewer when images changed
   update() {
-    const self = this;
-    const indexes = [];
+    const { element, options, isImg } = this;
 
     // Destroy viewer if the target image was deleted
-    if (self.isImg && !self.element.parentNode) {
-      return self.destroy();
+    if (isImg && !element.parentNode) {
+      return this.destroy();
     }
 
-    self.length = self.images.length;
+    const images = [];
 
-    if (self.ready) {
-      $.each(self.items, (item, i) => {
-        const img = $.getByTag(item, 'img')[0];
-        const image = self.images[i];
+    forEach(isImg ? [element] : element.querySelectorAll('img'), (image) => {
+      if (options.filter) {
+        if (options.filter(image)) {
+          images.push(image);
+        }
+      } else {
+        images.push(image);
+      }
+    });
+
+    if (!images.length) {
+      return this;
+    }
+
+    this.images = images;
+    this.length = images.length;
+
+    if (this.ready) {
+      const indexes = [];
+
+      forEach(this.items, (item, i) => {
+        const img = item.querySelector('img');
+        const image = images[i];
 
         if (image) {
           if (image.src !== img.src) {
@@ -728,59 +862,95 @@ export default {
         }
       });
 
-      $.setStyle(self.list, {
+      setStyle(this.list, {
         width: 'auto',
       });
 
-      self.initList();
+      this.initList();
 
-      if (self.visible) {
-        if (self.length) {
-          if (self.viewed) {
-            const index = $.inArray(self.index, indexes);
+      if (this.isShown) {
+        if (this.length) {
+          if (this.viewed) {
+            const index = indexes.indexOf(this.index);
 
             if (index >= 0) {
-              self.viewed = false;
-              self.view(Math.max(self.index - (index + 1), 0));
+              this.viewed = false;
+              this.view(Math.max(this.index - (index + 1), 0));
             } else {
-              $.addClass(self.items[self.index], 'viewer-active');
+              addClass(this.items[this.index], CLASS_ACTIVE);
             }
           }
         } else {
-          self.image = null;
-          self.viewed = false;
-          self.index = 0;
-          self.imageData = null;
-          $.empty(self.canvas);
-          $.empty(self.title);
+          this.image = null;
+          this.viewed = false;
+          this.index = 0;
+          this.imageData = {};
+          this.canvas.innerHTML = '';
+          this.title.innerHTML = '';
         }
       }
+    } else {
+      this.build();
     }
 
-    return self;
+    return this;
   },
 
   // Destroy the viewer
   destroy() {
-    const self = this;
-    const element = self.element;
+    const { element, options } = this;
 
-    if (self.options.inline) {
-      self.unbind();
-    } else {
-      if (self.visible) {
-        self.unbind();
+    if (!getData(element, NAMESPACE)) {
+      return this;
+    }
+
+    this.destroyed = true;
+
+    if (this.ready) {
+      if (this.played) {
+        this.stop();
       }
-      try {
-        self.onStart && $.removeListener(element, 'click', self.onStart);
-      } catch (error) {
-        console.error('destroy Viewer', error)
+
+      if (options.inline) {
+        if (this.fulled) {
+          this.exit();
+        }
+
+        this.unbind();
+      } else if (this.isShown) {
+        if (this.viewing) {
+          if (this.imageRendering) {
+            this.imageRendering.abort();
+          } else if (this.imageInitializing) {
+            this.imageInitializing.abort();
+          }
+        }
+
+        if (this.hiding) {
+          this.transitioning.abort();
+        }
+
+        this.hidden();
+      } else if (this.showing) {
+        this.transitioning.abort();
+        this.hidden();
+      }
+
+      this.ready = false;
+      this.viewer.parentNode.removeChild(this.viewer);
+    } else if (options.inline) {
+      if (this.delaying) {
+        this.delaying.abort();
+      } else if (this.initializing) {
+        this.initializing.abort();
       }
     }
 
-    self.unbuild();
-    $.removeData(element, 'viewer');
+    if (!options.inline) {
+      removeListener(element, EVENT_CLICK, this.onStart);
+    }
 
-    return self;
+    removeData(element, NAMESPACE);
+    return this;
   },
 };

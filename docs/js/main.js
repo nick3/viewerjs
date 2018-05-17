@@ -8,31 +8,31 @@ window.onload = function () {
   var toggles = document.querySelector('.docs-toggles');
   var buttons = document.querySelector('.docs-buttons');
   var options = {
-        // inline: true,
-        url: 'data-original',
-        ready:  function (e) {
-          console.log(e.type);
-        },
-        show:  function (e) {
-          console.log(e.type);
-        },
-        shown:  function (e) {
-          console.log(e.type);
-        },
-        hide:  function (e) {
-          console.log(e.type);
-        },
-        hidden:  function (e) {
-          console.log(e.type);
-        },
-        view:  function (e) {
-          console.log(e.type);
-        },
-        viewed:  function (e) {
-          console.log(e.type);
-          // this.viewer.zoomTo(1).rotateTo(180);
-        }
-      };
+    // inline: true,
+    selector: 'img',
+    url: 'data-original',
+    ready: function (e) {
+      console.log(e.type);
+    },
+    show: function (e) {
+      console.log(e.type);
+    },
+    shown: function (e) {
+      console.log(e.type);
+    },
+    hide: function (e) {
+      console.log(e.type);
+    },
+    hidden: function (e) {
+      console.log(e.type);
+    },
+    view: function (e) {
+      console.log(e.type);
+    },
+    viewed: function (e) {
+      console.log(e.type);
+    }
+  };
   var viewer;
 
   function toggleButtons(mode) {
@@ -111,7 +111,7 @@ window.onload = function () {
 
     if (viewer && method) {
       if (target) {
-        viewer[method](target.value);
+        viewer[method](document.querySelector(target).value);
       } else {
         viewer[method](args[0], args[1]);
       }

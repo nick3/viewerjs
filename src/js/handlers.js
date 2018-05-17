@@ -1,130 +1,157 @@
-import * as $ from './utilities';
+import {
+  ACTION_MOVE,
+  ACTION_SWITCH,
+  ACTION_ZOOM,
+  CLASS_INVISIBLE,
+  CLASS_LOADING,
+  CLASS_MOVE,
+  CLASS_TRANSITION,
+  DATA_ACTION,
+  EVENT_LOAD,
+  EVENT_VIEWED,
+} from './constants';
+import {
+  addClass,
+  addListener,
+  assign,
+  dispatchEvent,
+  forEach,
+  getData,
+  getImageNaturalSizes,
+  getPointer,
+  getTransforms,
+  hasClass,
+  isFunction,
+  removeClass,
+  setStyle,
+  toggleClass,
+} from './utilities';
 
 export default {
-  start(event) {
-    const self = this;
-    const e = $.getEvent(event);
-    const target = e.target;
-
-    if (target.tagName.toLowerCase() === 'img') {
-      self.target = target;
-      self.show();
-    }
-  },
-
-  click(event) {
-    const self = this;
-    const e = $.getEvent(event);
-    const target = e.target;
-    const action = $.getData(target, 'action');
-    const imageData = self.imageData;
+  click({ target }) {
+    const { options, imageData } = this;
+    const action = getData(target, DATA_ACTION);
 
     switch (action) {
       case 'mix':
-        if (self.played) {
-          self.stop();
-        } else if (self.options.inline) {
-          if (self.fulled) {
-            self.exit();
+        if (this.played) {
+          this.stop();
+        } else if (options.inline) {
+          if (this.fulled) {
+            this.exit();
           } else {
-            self.full();
+            this.full();
           }
         } else {
-          self.hide();
+          this.hide();
         }
 
         break;
 
+      case 'hide':
+        this.hide();
+        break;
+
       case 'view':
-        self.view($.getData(target, 'index'));
+        this.view(getData(target, 'index'));
         break;
 
       case 'zoom-in':
-        self.zoom(0.1, true);
+        this.zoom(0.1, true);
         break;
 
       case 'zoom-out':
-        self.zoom(-0.1, true);
+        this.zoom(-0.1, true);
         break;
 
       case 'one-to-one':
-        self.toggle();
+        this.toggle();
         break;
 
       case 'reset':
-        self.reset();
+        this.reset();
         break;
 
       case 'prev':
-        self.prev();
+        this.prev(options.loop);
         break;
 
       case 'play':
-        self.play();
+        this.play(options.fullscreen);
         break;
 
       case 'next':
-        self.next();
+        this.next(options.loop);
         break;
 
       case 'rotate-left':
-        self.rotate(-90);
+        this.rotate(-90);
         break;
 
       case 'rotate-right':
-        self.rotate(90);
+        this.rotate(90);
         break;
 
       case 'flip-horizontal':
-        self.scaleX(-imageData.scaleX || -1);
+        this.scaleX(-imageData.scaleX || -1);
         break;
 
       case 'flip-vertical':
-        self.scaleY(-imageData.scaleY || -1);
+        this.scaleY(-imageData.scaleY || -1);
         break;
 
       default:
-        if (self.played) {
-          self.stop();
+        if (this.played) {
+          this.stop();
         }
     }
   },
 
   load() {
-    const self = this;
-    const options = self.options;
-    const image = self.image;
-    const index = self.index;
-    const viewerData = self.viewerData;
-
-    if (self.timeout) {
-      clearTimeout(self.timeout);
-      self.timeout = false;
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = false;
     }
 
-    if (!image) {
-      return;
-    }
+    const {
+      element,
+      options,
+      image,
+      index,
+      viewerData,
+    } = this;
 
-    $.removeClass(image, 'viewer-invisible');
+    removeClass(image, CLASS_INVISIBLE);
+
+    if (options.loading) {
+      removeClass(this.canvas, CLASS_LOADING);
+    }
 
     image.style.cssText = (
-      'width:0;' +
       'height:0;' +
       `margin-left:${viewerData.width / 2}px;` +
       `margin-top:${viewerData.height / 2}px;` +
       'max-width:none!important;' +
-      'visibility:visible;'
+      'position:absolute;' +
+      'width:0;'
     );
 
-    self.initImage(() => {
-      $.toggleClass(image, 'viewer-transition', options.transition);
-      $.toggleClass(image, 'viewer-move', options.movable);
+    this.initImage(() => {
+      toggleClass(image, CLASS_MOVE, options.movable);
+      toggleClass(image, CLASS_TRANSITION, options.transition);
 
-      self.renderImage(() => {
-        self.viewed = true;
-        $.dispatchEvent(self.element, 'viewed', {
-          originalImage: self.images[index],
+      this.renderImage(() => {
+        this.viewed = true;
+        this.viewing = false;
+
+        if (isFunction(options.viewed)) {
+          addListener(element, EVENT_VIEWED, options.viewed, {
+            once: true,
+          });
+        }
+
+        dispatchEvent(element, EVENT_VIEWED, {
+          originalImage: this.images[index],
           index,
           image,
         });
@@ -132,15 +159,14 @@ export default {
     });
   },
 
-  loadImage(event) {
-    const e = $.getEvent(event);
+  loadImage(e) {
     const image = e.target;
     const parent = image.parentNode;
     const parentWidth = parent.offsetWidth || 30;
     const parentHeight = parent.offsetHeight || 50;
-    const filled = !!$.getData(image, 'filled');
+    const filled = !!getData(image, 'filled');
 
-    $.getImageSize(image, (naturalWidth, naturalHeight) => {
+    getImageNaturalSizes(image, (naturalWidth, naturalHeight) => {
       const aspectRatio = naturalWidth / naturalHeight;
       let width = parentWidth;
       let height = parentHeight;
@@ -157,154 +183,84 @@ export default {
         width = parentHeight * aspectRatio;
       }
 
-      $.setStyle(image, {
+      setStyle(image, assign({
         width,
         height,
-        marginLeft: (parentWidth - width) / 2,
-        marginTop: (parentHeight - height) / 2,
-      });
+      }, getTransforms({
+        translateX: (parentWidth - width) / 2,
+        translateY: (parentHeight - height) / 2,
+      })));
     });
   },
 
-  resize() {
-    const self = this;
+  keydown(e) {
+    const { options } = this;
 
-    self.initContainer();
-    self.initViewer();
-    self.renderViewer();
-    self.renderList();
-
-    if (self.viewed) {
-      self.initImage(() => {
-        self.renderImage();
-      });
-    }
-
-    if (self.played) {
-      if (self.options.fullscreen && self.fulled &&
-        !document.fullscreenElement &&
-        !document.mozFullScreenElement &&
-        !document.webkitFullscreenElement &&
-        !document.msFullscreenElement) {
-        self.stop();
-        return;
-      }
-
-      $.each($.getByTag(self.player, 'img'), (image) => {
-        $.addListener(image, 'load', $.proxy(self.loadImage, self), {
-          once: true,
-        });
-        $.dispatchEvent(image, 'load');
-      });
-    }
-  },
-
-  wheel(event) {
-    const self = this;
-    const e = $.getEvent(event);
-
-    if (!self.viewed) {
+    if (!this.fulled || !options.keyboard) {
       return;
     }
 
-    e.preventDefault();
-
-    // Limit wheel speed to prevent zoom too fast
-    if (self.wheeling) {
-      return;
-    }
-
-    self.wheeling = true;
-
-    setTimeout(() => {
-      self.wheeling = false;
-    }, 50);
-
-    const ratio = Number(self.options.zoomRatio) || 0.1;
-    let delta = 1;
-
-    if (e.deltaY) {
-      delta = e.deltaY > 0 ? 1 : -1;
-    } else if (e.wheelDelta) {
-      delta = -e.wheelDelta / 120;
-    } else if (e.detail) {
-      delta = e.detail > 0 ? 1 : -1;
-    }
-
-    self.zoom(-delta * ratio, true, e);
-  },
-
-  keydown(event) {
-    const self = this;
-    const e = $.getEvent(event);
-    const options = self.options;
-    const key = e.keyCode || e.which || e.charCode;
-
-    if (!self.fulled || !options.keyboard) {
-      return;
-    }
-
-    switch (key) {
-      // (Key: Esc)
+    switch (e.keyCode || e.which || e.charCode) {
+      // Escape
       case 27:
-        if (self.played) {
-          self.stop();
+        if (this.played) {
+          this.stop();
         } else if (options.inline) {
-          if (self.fulled) {
-            self.exit();
+          if (this.fulled) {
+            this.exit();
           }
         } else {
-          self.hide();
+          this.hide();
         }
 
         break;
 
-      // (Key: Space)
+      // Space
       case 32:
-        if (self.played) {
-          self.stop();
+        if (this.played) {
+          this.stop();
         }
 
         break;
 
-      // View previous (Key: ←)
+      // ArrowLeft
       case 37:
-        self.prev();
+        this.prev(options.loop);
         break;
 
-      // Zoom in (Key: ↑)
+      // ArrowUp
       case 38:
-
         // Prevent scroll on Firefox
         e.preventDefault();
 
-        self.zoom(options.zoomRatio, true);
+        // Zoom in
+        this.zoom(options.zoomRatio, true);
         break;
 
-      // View next (Key: →)
+      // ArrowRight
       case 39:
-        self.next();
+        this.next(options.loop);
         break;
 
-      // Zoom out (Key: ↓)
+      // ArrowDown
       case 40:
-
         // Prevent scroll on Firefox
         e.preventDefault();
 
-        self.zoom(-options.zoomRatio, true);
+        // Zoom out
+        this.zoom(-options.zoomRatio, true);
         break;
 
-      // Zoom out to initial size (Key: Ctrl + 0)
+      // Ctrl + 0
       case 48:
         // Fall through
 
-      // Zoom in to natural size (Key: Ctrl + 1)
-      // eslint-disable-next-line
+      // Ctrl + 1
+      // eslint-disable-next-line no-fallthrough
       case 49:
-        if (e.ctrlKey || e.shiftKey) {
+        if (e.ctrlKey) {
           e.preventDefault();
-          self.toggle();
+          this.toggle();
         }
 
         break;
@@ -319,76 +275,66 @@ export default {
     }
   },
 
-  pointerdown(event) {
-    const self = this;
-    const options = self.options;
-    const pointers = self.pointers;
-    const e = $.getEvent(event);
+  pointerdown(e) {
+    const { options, pointers } = this;
 
-    if (!self.viewed || self.transitioning) {
+    if (!this.viewed || this.showing || this.viewing || this.hiding) {
       return;
     }
 
     if (e.changedTouches) {
-      $.each(e.changedTouches, (touch) => {
-        pointers[touch.identifier] = $.getPointer(touch);
+      forEach(e.changedTouches, (touch) => {
+        pointers[touch.identifier] = getPointer(touch);
       });
     } else {
-      pointers[e.pointerId || 0] = $.getPointer(e);
+      pointers[e.pointerId || 0] = getPointer(e);
     }
 
-    let action = options.movable ? 'move' : false;
+    let action = options.movable ? ACTION_MOVE : false;
 
     if (Object.keys(pointers).length > 1) {
-      action = 'zoom';
-    } else if ((e.pointerType === 'touch' || e.type === 'touchmove') && self.isSwitchable()) {
-      action = 'switch';
+      action = ACTION_ZOOM;
+    } else if ((e.pointerType === 'touch' || e.type === 'touchstart') && this.isSwitchable()) {
+      action = ACTION_SWITCH;
     }
 
-    self.action = action;
+    this.action = action;
   },
 
-  pointermove(event) {
-    const self = this;
-    const options = self.options;
-    const pointers = self.pointers;
-    const e = $.getEvent(event);
-    const action = self.action;
-    const image = self.image;
+  pointermove(e) {
+    const {
+      options,
+      pointers,
+      action,
+      image,
+    } = this;
 
-    if (!self.viewed || !action) {
+    if (!this.viewed || !action) {
       return;
     }
 
     e.preventDefault();
 
     if (e.changedTouches) {
-      $.each(e.changedTouches, (touch) => {
-        $.extend(pointers[touch.identifier], $.getPointer(touch, true));
+      forEach(e.changedTouches, (touch) => {
+        assign(pointers[touch.identifier], getPointer(touch, true));
       });
     } else {
-      $.extend(pointers[e.pointerId || 0], $.getPointer(e, true));
+      assign(pointers[e.pointerId || 0], getPointer(e, true));
     }
 
-    if (action === 'move' && options.transition && $.hasClass(image, 'viewer-transition')) {
-      $.removeClass(image, 'viewer-transition');
+    if (action === ACTION_MOVE && options.transition && hasClass(image, CLASS_TRANSITION)) {
+      removeClass(image, CLASS_TRANSITION);
     }
 
-    self.change(e);
+    this.change(e);
   },
 
-  pointerup(event) {
-    const self = this;
-    const pointers = self.pointers;
-    const e = $.getEvent(event);
-    const action = self.action;
-
-    if (!self.viewed) {
-      return;
-    }
+  pointerup(e) {
+    const { action, pointers } = this;
 
     if (e.changedTouches) {
-      $.each(e.changedTouches, (touch) => {
+      forEach(e.changedTouches, (touch) => {
         delete pointers[touch.identifier];
       });
     } else {
@@ -399,10 +345,77 @@ export default {
       return;
     }
 
-    if (action === 'move' && self.options.transition) {
-      $.addClass(self.image, 'viewer-transition');
+    if (action === ACTION_MOVE && this.options.transition) {
+      addClass(this.image, CLASS_TRANSITION);
     }
 
-    self.action = false;
+    this.action = false;
+  },
+
+  resize() {
+    if (!this.isShown || this.hiding) {
+      return;
+    }
+
+    this.initContainer();
+    this.initViewer();
+    this.renderViewer();
+    this.renderList();
+
+    if (this.viewed) {
+      this.initImage(() => {
+        this.renderImage();
+      });
+    }
+
+    if (this.played) {
+      if (this.options.fullscreen && this.fulled &&
+        !document.fullscreenElement &&
+        !document.mozFullScreenElement &&
+        !document.webkitFullscreenElement &&
+        !document.msFullscreenElement) {
+        this.stop();
+        return;
+      }
+
+      forEach(this.player.getElementsByTagName('img'), (image) => {
+        addListener(image, EVENT_LOAD, this.loadImage.bind(this), {
+          once: true,
+        });
+        dispatchEvent(image, EVENT_LOAD);
+      });
+    }
+  },
+
+  wheel(e) {
+    if (!this.viewed) {
+      return;
+    }
+
+    e.preventDefault();
+
+    // Limit wheel speed to prevent zoom too fast
+    if (this.wheeling) {
+      return;
+    }
+
+    this.wheeling = true;
+
+    setTimeout(() => {
+      this.wheeling = false;
+    }, 50);
+
+    const ratio = Number(this.options.zoomRatio) || 0.1;
+    let delta = 1;
+
+    if (e.deltaY) {
+      delta = e.deltaY > 0 ? 1 : -1;
+    } else if (e.wheelDelta) {
+      delta = -e.wheelDelta / 120;
+    } else if (e.detail) {
+      delta = e.detail > 0 ? 1 : -1;
+    }
+
+    this.zoom(-delta * ratio, true, e);
   },
 };

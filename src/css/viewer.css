@@ -170,14 +170,32 @@
     line-height: 0;
     opacity: .5;
     overflow: hidden;
+    transition: opacity .15s;
     width: 30px;
+
+    &:hover {
+      opacity: .75;
+    }
 
     & + li {
       margin-left: 1px;
     }
   }
 
-  & > .viewer-active {
+  & > .viewer-loading {
+    position: relative;
+
+    &::after {
+      border-width: 2px;
+      height: 20px;
+      margin-left: -10px;
+      margin-top: -10px;
+      width: 20px;
+    }
+  }
+
+  & > .viewer-active,
+  & > .viewer-active:hover {
      opacity: 1;
   }
 }
@@ -200,18 +218,21 @@
 }
 
 .viewer-toolbar {
-  margin: 0 auto 5px;
-  overflow: hidden;
-  padding: 3px 0;
-  width: 280px;
+  & ul {
+    display: inline-block;
+    margin: 0 auto 5px;
+    overflow: hidden;
+    padding: 3px 0;
+  }
 
-  & > li {
+  & li {
     background-color: rgba(0, 0, 0, .5);
     border-radius: 50%;
     cursor: pointer;
     float: left;
     height: 24px;
     overflow: hidden;
+    transition: background-color .15s;
     width: 24px;
 
     &:hover {
@@ -227,7 +248,18 @@
     }
   }
 
-  & > .viewer-play {
+  & .viewer-small {
+    height: 18px;
+    margin-bottom: 3px;
+    margin-top: 3px;
+    width: 18px;
+
+    &::before {
+      margin: -1px;
+    }
+  }
+
+  & .viewer-large {
     height: 30px;
     margin-bottom: -3px;
     margin-top: -3px;
@@ -266,6 +298,7 @@
   opacity: .8;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity .15s;
   white-space: nowrap;
 
   &:hover {
@@ -282,7 +315,13 @@
   position: absolute;
   right: -40px;
   top: -40px;
+  transition: background-color .15s;
   width: 80px;
+
+  &:focus,
+  &:hover {
+    background-color: rgba(0, 0, 0, .8);
+  }
 
   &::before {
     bottom: 15px;
@@ -307,6 +346,10 @@
   display: none;
 }
 
+.viewer-backdrop {
+  background-color: rgba(0, 0, 0, .5);
+}
+
 .viewer-invisible {
   visibility: hidden;
 }
@@ -326,6 +369,35 @@
 
 .viewer-transition {
   transition: all .3s;
+}
+
+@keyframes viewer-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.viewer-loading {
+  &::after {
+    animation: viewer-spinner 1s linear infinite;
+    border: 4px solid rgba(255, 255, 255, .1);
+    border-left-color: rgba(255, 255, 255, .5);
+    border-radius: 50%;
+    content: '';
+    display: inline-block;
+    height: 40px;
+    left: 50%;
+    margin-left: -20px;
+    margin-top: -20px;
+    position: absolute;
+    top: 50%;
+    width: 40px;
+    z-index: 1;
+  }
 }
 
 @media (max-width: 767px) {
